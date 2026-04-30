@@ -1,0 +1,41 @@
+{
+  "datasets": [
+    {
+      "name": "raw_orders",
+      "type": "table",
+      "uri": "duckdb://warehouse/raw_orders"
+    },
+    {
+      "name": "clean_orders",
+      "type": "table",
+      "uri": "duckdb://warehouse/clean_orders"
+    },
+    {
+      "name": "mart_daily_sales",
+      "type": "table",
+      "uri": "duckdb://warehouse/mart_daily_sales"
+    },
+    {
+      "name": "sales_dashboard",
+      "type": "dashboard",
+      "uri": "dashboard://sales/daily"
+    }
+  ],
+  "jobs": [
+    {
+      "name": "clean_orders_job",
+      "inputs": ["raw_orders"],
+      "outputs": ["clean_orders"]
+    },
+    {
+      "name": "daily_sales_job",
+      "inputs": ["clean_orders"],
+      "outputs": ["mart_daily_sales"]
+    },
+    {
+      "name": "sales_dashboard_refresh",
+      "inputs": ["mart_daily_sales"],
+      "outputs": ["sales_dashboard"]
+    }
+  ]
+}
