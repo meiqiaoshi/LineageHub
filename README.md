@@ -276,7 +276,10 @@ LineageHub/
 │       ├── loader.py
 │       └── graph.py
 └── tests/
-    └── test_graph.py
+    ├── conftest.py
+    ├── test_store.py
+    ├── test_graph.py
+    └── test_loader.py
 ```
 
 ---
@@ -311,6 +314,40 @@ LineageHub/
 - Add simple graph visualization
 - Provide API responses for upstream, downstream, and impact queries
 - Prepare integration with a natural-language metadata assistant
+
+---
+
+## Local setup and usage
+
+Requirements: **Python 3.10+**.
+
+Install in editable mode (includes dev dependencies such as pytest):
+
+```bash
+pip install -e ".[dev]"
+```
+
+Load the sample lineage file into the default SQLite database (`./lineagehub.db`, unless overridden):
+
+```bash
+lineagehub load examples/sample_lineage.json
+lineagehub upstream mart_daily_sales
+lineagehub downstream raw_orders
+lineagehub impact raw_orders
+```
+
+Use a different database path with `--db` or the `LINEAGEHUB_DB` environment variable:
+
+```bash
+lineagehub --db /tmp/lineage.db load examples/sample_lineage.json
+LINEAGEHUB_DB=/tmp/lineage.db lineagehub impact raw_orders
+```
+
+Run tests from the repository root:
+
+```bash
+pytest
+```
 
 ---
 
@@ -349,9 +386,9 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-Project initialized.
+**MVP (local CLI):** metadata models, SQLite store, JSON loader, graph traversal (upstream / downstream / impact), CLI commands, and pytest coverage for the store and graph layers.
 
-The first milestone is to build a local CLI-based lineage system with SQLite metadata storage and graph-based upstream/downstream queries.
+Out of scope for this milestone: web UI, API server, and live lineage capture (see roadmap below).
 
 ---
 

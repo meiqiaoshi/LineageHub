@@ -1,0 +1,39 @@
+"""Tests for lineage graph traversal."""
+
+from __future__ import annotations
+
+import pytest
+
+from lineagehub.graph import get_downstream, get_upstream, impact_analysis
+from lineagehub.store import MetadataStore
+
+
+def test_upstream_transitive_order(sample_store: MetadataStore) -> None:
+    assert get_upstream(sample_store, "mart_daily_sales") == ["clean_orders", "raw_orders"]
+
+
+def test_downstream_transitive_order(sample_store: MetadataStore) -> None:
+    assert get_downstream(sample_store, "raw_orders") == [
+        "clean_orders",
+        "mart_daily_sales",
+        "sales_dashboard",
+    ]
+
+
+def test_impact_matches_downstream(sample_store: MetadataStore) -> None:
+    assert impact_analysis(sample_store, "raw_orders") == get_downstream(
+        sample_store, "raw_orders"
+    )
+
+
+def test_unknown_dataset_raises(sample_store: MetadataStore) -> None:
+    with pytest.raises(ValueError, match="Unknown dataset"):
+        get_upstream(sample_store, "no_such_table")
+
+
+def test_leaf_upstream_empty(sample_store: MetadataStore) -> None:
+    assert get_upstream(sample_store, "raw_orders") == []
+
+
+def test_sink_downstream_empty(sample_store: MetadataStore) -> None:
+    assert get_downstream(sample_store, "sales_dashboard") == []
