@@ -224,6 +224,14 @@ class MetadataStore:
         finally:
             conn.close()
 
+    def list_datasets(self) -> list[Dataset]:
+        conn = self.connect()
+        try:
+            rows = conn.execute("SELECT * FROM datasets ORDER BY name").fetchall()
+            return [_row_to_dataset(r) for r in rows]
+        finally:
+            conn.close()
+
     def list_lineage_edges(self) -> list[LineageEdge]:
         conn = self.connect()
         try:
