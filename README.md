@@ -349,6 +349,13 @@ Run tests from the repository root:
 pytest
 ```
 
+Without installing the package globally, point Python at `src/` and invoke the CLI as a module:
+
+```bash
+PYTHONPATH=src python -m lineagehub --help
+PYTHONPATH=src python -m lineagehub load examples/sample_lineage.json
+```
+
 ---
 
 ## Technology Stack

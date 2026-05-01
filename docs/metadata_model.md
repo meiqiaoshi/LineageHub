@@ -43,6 +43,10 @@ Example:
 }
 ```
 
+### Implementation note (JSON, Python, SQLite)
+
+Lineage JSON uses the key **`type`** for dataset kind (see table above). In Python code the corresponding dataclass field is named **`dataset_type`** so it does not shadow the builtin `type`. The SQLite table column remains **`type`**, matching this document.
+
 ---
 
 ## Entity: Job
