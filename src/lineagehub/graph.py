@@ -9,6 +9,7 @@ from lineagehub.models import LineageEdge, LineageResult
 from lineagehub.store import MetadataStore
 
 DepthSpec = Literal["direct", "all"]
+DirectionSpec = Literal["upstream", "downstream", "both"]
 
 
 def get_direct_upstream(store: MetadataStore, dataset_name: str) -> list[str]:
@@ -83,6 +84,53 @@ def lineage_impact_results(
 ) -> list[LineageResult]:
     """Dataset-level impact as downstream closure with distances."""
     return lineage_downstream_results(store, dataset_name, depth=depth)
+
+
+def collect_graph_edges(
+    store: MetadataStore,
+    dataset_name: str,
+    *,
+    direction: DirectionSpec = "downstream",
+    depth: DepthSpec = "all",
+) -> list[tuple[str, str]]:
+    """Directed edges ``(upstream_name, downstream_name)`` for export."""
+    root = _dataset_id_or_raise(store, dataset_name)
+    edges_raw = store.list_lineage_edges()
+    forward = _build_forward_adjacency(edges_raw)
+    backward = _build_backward_adjacency(edges_raw)
+    id_to_name = _id_to_name_map(store)
+
+    seen: set[tuple[str, str]] = set()
+    ordered: list[tuple[str, str]] = []
+
+    def add_edge(uid: int, vid: int) -> None:
+        key = (id_to_name[uid], id_to_name[vid])
+        if key not in seen:
+            seen.add(key)
+            ordered.append(key)
+
+    if direction in ("downstream", "both"):
+        if depth == "direct":
+            for v in sorted(set(forward.get(root, [])), key=lambda i: id_to_name[i]):
+                add_edge(root, v)
+        else:
+            closure = {root} | set(_bfs_general(forward, root))
+            for e in edges_raw:
+                if e.upstream_dataset_id in closure and e.downstream_dataset_id in closure:
+                    add_edge(e.upstream_dataset_id, e.downstream_dataset_id)
+
+    if direction in ("upstream", "both"):
+        if depth == "direct":
+            for u in sorted(set(backward.get(root, [])), key=lambda i: id_to_name[i]):
+                add_edge(u, root)
+        else:
+            closure = {root} | set(_bfs_general(backward, root))
+            for e in edges_raw:
+                if e.upstream_dataset_id in closure and e.downstream_dataset_id in closure:
+                    add_edge(e.upstream_dataset_id, e.downstream_dataset_id)
+
+    ordered.sort(key=lambda t: (t[0], t[1]))
+    return ordered
 
 
 def _dataset_id_or_raise(store: MetadataStore, dataset_name: str) -> int:

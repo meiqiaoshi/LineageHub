@@ -1,6 +1,7 @@
 """LineageHub: dataset lineage metadata (local MVP)."""
 
 from lineagehub.graph import (
+    collect_graph_edges,
     get_direct_downstream,
     get_direct_upstream,
     get_downstream,
@@ -32,5 +33,6 @@ __all__ = [
     "lineage_upstream_results",
     "lineage_downstream_results",
     "lineage_impact_results",
+    "collect_graph_edges",
     "__version__",
 ]

@@ -45,6 +45,26 @@ def test_downstream_json_direct(tmp_path: Path, capsys: pytest.CaptureFixture[st
     assert payload["datasets"] == [{"name": "clean_orders", "distance": 1}]
 
 
+def test_graph_mermaid_stdout(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    db = _seed_db(tmp_path)
+    assert (
+        main(
+            [
+                "--db",
+                str(db),
+                "graph",
+                "raw_orders",
+                "--direction",
+                "downstream",
+                "--format",
+                "mermaid",
+            ],
+        )
+        == 0
+    )
+    assert "graph TD" in capsys.readouterr().out
+
+
 def test_impact_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     db = _seed_db(tmp_path)
     assert main(["--db", str(db), "impact", "raw_orders", "--json"]) == 0

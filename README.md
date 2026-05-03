@@ -281,7 +281,8 @@ LineageHub/
     ├── test_store.py
     ├── test_graph.py
     ├── test_loader.py
-    └── test_cli_json.py
+    ├── test_cli_json.py
+    └── test_formatters.py
 ```
 
 ---
@@ -356,6 +357,15 @@ Machine-readable JSON (includes **`distance`** — shortest-path hops from the q
 lineagehub upstream mart_daily_sales --json
 lineagehub downstream raw_orders --depth direct --json
 lineagehub impact raw_orders --json
+```
+
+Export edges for visualization (**`--direction`**: `upstream` \| `downstream` \| `both`; **`--format`**: `text` \| `mermaid` \| `dot`; defaults: downstream + all hops + text):
+
+```bash
+lineagehub graph raw_orders
+lineagehub graph mart_daily_sales --direction upstream --depth direct --format text
+lineagehub graph raw_orders --format mermaid
+lineagehub graph raw_orders --format dot
 ```
 
 Use a different database path with `--db` or the `LINEAGEHUB_DB` environment variable:

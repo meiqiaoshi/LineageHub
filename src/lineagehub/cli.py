@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from lineagehub.graph import (
+    collect_graph_edges,
     get_direct_downstream,
     get_direct_upstream,
     get_downstream,
@@ -21,6 +22,9 @@ from lineagehub.loader import load_lineage_json
 from lineagehub.output import (
     downstream_payload,
     dumps_json,
+    format_edges_dot,
+    format_edges_mermaid,
+    format_edges_text,
     impact_payload,
     upstream_payload,
 )
@@ -63,6 +67,22 @@ def main(argv: list[str] | None = None) -> int:
     p_impact = sub.add_parser("impact", help="List datasets affected if this asset fails")
     p_impact.add_argument("dataset", help="Dataset name")
     p_impact.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    p_graph = sub.add_parser("graph", help="Export lineage edges for a dataset")
+    p_graph.add_argument("dataset", help="Dataset name")
+    p_graph.add_argument(
+        "--direction",
+        choices=["upstream", "downstream", "both"],
+        default="downstream",
+        help="Which edges to include (default: downstream)",
+    )
+    p_graph.add_argument("--depth", **depth_opt)
+    p_graph.add_argument(
+        "--format",
+        choices=["text", "mermaid", "dot"],
+        default="text",
+        help="Output format (default: text)",
+    )
 
     args = parser.parse_args(argv)
     db_path = Path(args.db)
@@ -110,6 +130,23 @@ def main(argv: list[str] | None = None) -> int:
                 rows = impact_analysis(store, args.dataset)
                 print(f"Downstream assets affected by {args.dataset}:\n")
                 _print_bullets(rows)
+                return 0
+            case "graph":
+                edges = collect_graph_edges(
+                    store,
+                    args.dataset,
+                    direction=args.direction,
+                    depth=args.depth,
+                )
+                match args.format:
+                    case "text":
+                        sys.stdout.write(format_edges_text(edges))
+                    case "mermaid":
+                        sys.stdout.write(format_edges_mermaid(edges))
+                    case "dot":
+                        sys.stdout.write(format_edges_dot(edges))
+                    case _:
+                        raise RuntimeError(f"unhandled format: {args.format!r}")
                 return 0
             case _:
                 raise RuntimeError(f"unhandled command: {args.command!r}")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from lineagehub.graph import (
+    collect_graph_edges,
     get_direct_downstream,
     get_direct_upstream,
     get_downstream,
@@ -63,3 +64,17 @@ def test_lineage_upstream_includes_distances(sample_store: MetadataStore) -> Non
 def test_lineage_downstream_direct_distances(sample_store: MetadataStore) -> None:
     rows = lineage_downstream_results(sample_store, "raw_orders", depth="direct")
     assert [(r.name, r.distance) for r in rows] == [("clean_orders", 1)]
+
+
+def test_collect_graph_edges_downstream_transitive(sample_store: MetadataStore) -> None:
+    edges = collect_graph_edges(sample_store, "raw_orders", direction="downstream", depth="all")
+    assert ("raw_orders", "clean_orders") in edges
+    assert ("clean_orders", "mart_daily_sales") in edges
+    assert ("mart_daily_sales", "sales_dashboard") in edges
+
+
+def test_collect_graph_edges_upstream_direct(sample_store: MetadataStore) -> None:
+    edges = collect_graph_edges(
+        sample_store, "mart_daily_sales", direction="upstream", depth="direct"
+    )
+    assert edges == [("clean_orders", "mart_daily_sales")]
