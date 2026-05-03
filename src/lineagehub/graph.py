@@ -8,12 +8,30 @@ from lineagehub.models import LineageEdge
 from lineagehub.store import MetadataStore
 
 
+def get_direct_upstream(store: MetadataStore, dataset_name: str) -> list[str]:
+    """Immediate upstream datasets (one hop backward), sorted by name."""
+    start = _dataset_id_or_raise(store, dataset_name)
+    backward = _build_backward_adjacency(store.list_lineage_edges())
+    id_to_name = _id_to_name_map(store)
+    parents = sorted(set(backward.get(start, [])), key=lambda i: id_to_name[i])
+    return [id_to_name[i] for i in parents]
+
+
 def get_upstream(store: MetadataStore, dataset_name: str) -> list[str]:
     """Transitive upstream datasets (dependencies), breadth-first, nearest first."""
     start = _dataset_id_or_raise(store, dataset_name)
     backward = _build_backward_adjacency(store.list_lineage_edges())
     ids = _bfs_general(backward, start)
     return _ids_to_names(store, ids)
+
+
+def get_direct_downstream(store: MetadataStore, dataset_name: str) -> list[str]:
+    """Immediate downstream datasets (one hop forward), sorted by name."""
+    start = _dataset_id_or_raise(store, dataset_name)
+    forward = _build_forward_adjacency(store.list_lineage_edges())
+    id_to_name = _id_to_name_map(store)
+    children = sorted(set(forward.get(start, [])), key=lambda i: id_to_name[i])
+    return [id_to_name[i] for i in children]
 
 
 def get_downstream(store: MetadataStore, dataset_name: str) -> list[str]:
@@ -69,7 +87,11 @@ def _bfs_general(adj: dict[int, list[int]], start_id: int) -> list[int]:
     return order
 
 
+def _id_to_name_map(store: MetadataStore) -> dict[int, str]:
+    return {d.dataset_id: d.name for d in store.list_datasets() if d.dataset_id is not None}
+
+
 def _ids_to_names(store: MetadataStore, ids: list[int]) -> list[str]:
-    id_to_name = {d.dataset_id: d.name for d in store.list_datasets() if d.dataset_id is not None}
+    id_to_name = _id_to_name_map(store)
     return [id_to_name[i] for i in ids]
 

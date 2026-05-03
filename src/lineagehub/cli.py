@@ -7,7 +7,13 @@ import os
 import sys
 from pathlib import Path
 
-from lineagehub.graph import get_downstream, get_upstream, impact_analysis
+from lineagehub.graph import (
+    get_direct_downstream,
+    get_direct_upstream,
+    get_downstream,
+    get_upstream,
+    impact_analysis,
+)
 from lineagehub.loader import load_lineage_json
 from lineagehub.store import MetadataStore
 
@@ -29,11 +35,19 @@ def main(argv: list[str] | None = None) -> int:
     p_load = sub.add_parser("load", help="Load lineage metadata from a JSON file")
     p_load.add_argument("path", type=Path, help="Path to lineage JSON")
 
-    p_up = sub.add_parser("upstream", help="List transitive upstream datasets")
-    p_up.add_argument("dataset", help="Dataset name")
+    depth_opt = {
+        "choices": ["direct", "all"],
+        "default": "all",
+        "help": "direct: immediate neighbors only; all: full transitive closure (default)",
+    }
 
-    p_down = sub.add_parser("downstream", help="List transitive downstream datasets")
+    p_up = sub.add_parser("upstream", help="List upstream datasets for a dataset")
+    p_up.add_argument("dataset", help="Dataset name")
+    p_up.add_argument("--depth", **depth_opt)
+
+    p_down = sub.add_parser("downstream", help="List downstream datasets for a dataset")
     p_down.add_argument("dataset", help="Dataset name")
+    p_down.add_argument("--depth", **depth_opt)
 
     p_impact = sub.add_parser("impact", help="List datasets affected if this asset fails")
     p_impact.add_argument("dataset", help="Dataset name")
@@ -49,13 +63,23 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Loaded lineage metadata from {args.path} into {db_path.resolve()}")
                 return 0
             case "upstream":
-                rows = get_upstream(store, args.dataset)
-                print(f"Upstream dependencies for {args.dataset}:\n")
+                rows = (
+                    get_direct_upstream(store, args.dataset)
+                    if args.depth == "direct"
+                    else get_upstream(store, args.dataset)
+                )
+                label = "Direct upstream" if args.depth == "direct" else "Upstream"
+                print(f"{label} dependencies for {args.dataset}:\n")
                 _print_bullets(rows)
                 return 0
             case "downstream":
-                rows = get_downstream(store, args.dataset)
-                print(f"Downstream datasets from {args.dataset}:\n")
+                rows = (
+                    get_direct_downstream(store, args.dataset)
+                    if args.depth == "direct"
+                    else get_downstream(store, args.dataset)
+                )
+                label = "Direct downstream" if args.depth == "direct" else "Downstream"
+                print(f"{label} datasets from {args.dataset}:\n")
                 _print_bullets(rows)
                 return 0
             case "impact":

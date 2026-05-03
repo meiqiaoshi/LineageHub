@@ -336,6 +336,18 @@ lineagehub downstream raw_orders
 lineagehub impact raw_orders
 ```
 
+For **upstream** and **downstream**, control whether to show only **immediate** neighbors or the **full transitive** closure:
+
+- `--depth direct` — one hop (direct dependencies or dependents).
+- `--depth all` — default; all datasets reachable through the graph, breadth-first from nearest to farthest.
+
+Example:
+
+```bash
+lineagehub upstream mart_daily_sales --depth direct
+lineagehub downstream raw_orders --depth all
+```
+
 Use a different database path with `--db` or the `LINEAGEHUB_DB` environment variable:
 
 ```bash

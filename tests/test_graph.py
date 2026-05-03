@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from lineagehub.graph import get_downstream, get_upstream, impact_analysis
+from lineagehub.graph import (
+    get_direct_downstream,
+    get_direct_upstream,
+    get_downstream,
+    get_upstream,
+    impact_analysis,
+)
 from lineagehub.store import MetadataStore
 
 
@@ -37,3 +43,11 @@ def test_leaf_upstream_empty(sample_store: MetadataStore) -> None:
 
 def test_sink_downstream_empty(sample_store: MetadataStore) -> None:
     assert get_downstream(sample_store, "sales_dashboard") == []
+
+
+def test_direct_upstream_single_hop(sample_store: MetadataStore) -> None:
+    assert get_direct_upstream(sample_store, "mart_daily_sales") == ["clean_orders"]
+
+
+def test_direct_downstream_single_hop(sample_store: MetadataStore) -> None:
+    assert get_direct_downstream(sample_store, "raw_orders") == ["clean_orders"]
