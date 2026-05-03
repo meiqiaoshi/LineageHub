@@ -13,8 +13,17 @@ from lineagehub.graph import (
     get_downstream,
     get_upstream,
     impact_analysis,
+    lineage_downstream_results,
+    lineage_impact_results,
+    lineage_upstream_results,
 )
 from lineagehub.loader import load_lineage_json
+from lineagehub.output import (
+    downstream_payload,
+    dumps_json,
+    impact_payload,
+    upstream_payload,
+)
 from lineagehub.store import MetadataStore
 
 
@@ -44,13 +53,16 @@ def main(argv: list[str] | None = None) -> int:
     p_up = sub.add_parser("upstream", help="List upstream datasets for a dataset")
     p_up.add_argument("dataset", help="Dataset name")
     p_up.add_argument("--depth", **depth_opt)
+    p_up.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_down = sub.add_parser("downstream", help="List downstream datasets for a dataset")
     p_down.add_argument("dataset", help="Dataset name")
     p_down.add_argument("--depth", **depth_opt)
+    p_down.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_impact = sub.add_parser("impact", help="List datasets affected if this asset fails")
     p_impact.add_argument("dataset", help="Dataset name")
+    p_impact.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     args = parser.parse_args(argv)
     db_path = Path(args.db)
@@ -63,6 +75,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Loaded lineage metadata from {args.path} into {db_path.resolve()}")
                 return 0
             case "upstream":
+                if args.json:
+                    items = lineage_upstream_results(store, args.dataset, depth=args.depth)
+                    sys.stdout.write(dumps_json(upstream_payload(args.dataset, args.depth, items)))
+                    return 0
                 rows = (
                     get_direct_upstream(store, args.dataset)
                     if args.depth == "direct"
@@ -73,6 +89,10 @@ def main(argv: list[str] | None = None) -> int:
                 _print_bullets(rows)
                 return 0
             case "downstream":
+                if args.json:
+                    items = lineage_downstream_results(store, args.dataset, depth=args.depth)
+                    sys.stdout.write(dumps_json(downstream_payload(args.dataset, args.depth, items)))
+                    return 0
                 rows = (
                     get_direct_downstream(store, args.dataset)
                     if args.depth == "direct"
@@ -83,6 +103,10 @@ def main(argv: list[str] | None = None) -> int:
                 _print_bullets(rows)
                 return 0
             case "impact":
+                if args.json:
+                    items = lineage_impact_results(store, args.dataset, depth="all")
+                    sys.stdout.write(dumps_json(impact_payload(args.dataset, items)))
+                    return 0
                 rows = impact_analysis(store, args.dataset)
                 print(f"Downstream assets affected by {args.dataset}:\n")
                 _print_bullets(rows)

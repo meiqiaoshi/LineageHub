@@ -274,12 +274,14 @@ LineageHub/
 │       ├── models.py
 │       ├── store.py
 │       ├── loader.py
-│       └── graph.py
+│       ├── graph.py
+│       └── output.py
 └── tests/
     ├── conftest.py
     ├── test_store.py
     ├── test_graph.py
-    └── test_loader.py
+    ├── test_loader.py
+    └── test_cli_json.py
 ```
 
 ---
@@ -346,6 +348,14 @@ Example:
 ```bash
 lineagehub upstream mart_daily_sales --depth direct
 lineagehub downstream raw_orders --depth all
+```
+
+Machine-readable JSON (includes **`distance`** — shortest-path hops from the queried dataset):
+
+```bash
+lineagehub upstream mart_daily_sales --json
+lineagehub downstream raw_orders --depth direct --json
+lineagehub impact raw_orders --json
 ```
 
 Use a different database path with `--db` or the `LINEAGEHUB_DB` environment variable:

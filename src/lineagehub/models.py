@@ -30,6 +30,14 @@ class Job:
     updated_at: str | None = None
 
 
+@dataclass(frozen=True)
+class LineageResult:
+    """Dataset name and shortest-path hop count from the query root."""
+
+    name: str
+    distance: int
+
+
 @dataclass
 class Run:
     """One execution of a job."""

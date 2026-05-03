@@ -10,6 +10,8 @@ from lineagehub.graph import (
     get_downstream,
     get_upstream,
     impact_analysis,
+    lineage_downstream_results,
+    lineage_upstream_results,
 )
 from lineagehub.store import MetadataStore
 
@@ -51,3 +53,13 @@ def test_direct_upstream_single_hop(sample_store: MetadataStore) -> None:
 
 def test_direct_downstream_single_hop(sample_store: MetadataStore) -> None:
     assert get_direct_downstream(sample_store, "raw_orders") == ["clean_orders"]
+
+
+def test_lineage_upstream_includes_distances(sample_store: MetadataStore) -> None:
+    rows = lineage_upstream_results(sample_store, "mart_daily_sales", depth="all")
+    assert [(r.name, r.distance) for r in rows] == [("clean_orders", 1), ("raw_orders", 2)]
+
+
+def test_lineage_downstream_direct_distances(sample_store: MetadataStore) -> None:
+    rows = lineage_downstream_results(sample_store, "raw_orders", depth="direct")
+    assert [(r.name, r.distance) for r in rows] == [("clean_orders", 1)]
