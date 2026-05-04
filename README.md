@@ -119,6 +119,15 @@ lineagehub load examples/sample_lineage.json
 
 ---
 
+## Documentation
+
+- [System design](docs/system_design.md)
+- [Metadata model](docs/metadata_model.md)
+- [Roadmap](docs/roadmap.md)
+- [Integration plan](docs/integration_plan.md) — how LineageHub could align with ingestion, quality, and NL tooling (planned only)
+
+---
+
 ## Planned Architecture
 
 ```text
@@ -267,7 +276,8 @@ LineageHub/
 ├── docs/
 │   ├── system_design.md
 │   ├── metadata_model.md
-│   └── roadmap.md
+│   ├── roadmap.md
+│   └── integration_plan.md
 ├── src/
 │   └── lineagehub/
 │       ├── __init__.py
@@ -276,7 +286,8 @@ LineageHub/
 │       ├── store.py
 │       ├── loader.py
 │       ├── graph.py
-│       └── output.py
+│       ├── output.py
+│       └── api.py
 └── tests/
     ├── conftest.py
     ├── test_store.py
@@ -285,7 +296,8 @@ LineageHub/
     ├── test_cli_json.py
     ├── test_formatters.py
     ├── test_runs_loader.py
-    └── test_impact_run.py
+    ├── test_impact_run.py
+    └── test_api.py
 ```
 
 ---
@@ -300,12 +312,12 @@ LineageHub/
 - Implement upstream and downstream graph traversal
 - Implement CLI commands for lineage queries
 
-### Phase 2 — Impact Analysis
+### Phase 2 — Runs, impact, and tooling
 
-- Add failure impact analysis
-- Connect failed jobs to downstream datasets
-- Add run status tracking
-- Generate readable impact summaries
+- Run metadata with external ids and **run-aware** downstream impact (`impact-run`)
+- Dataset-level impact and graph traversal with **`--depth`** / **`--json`**
+- Graph export for diagrams (**text / Mermaid / DOT**)
+- Optional **read-only FastAPI** (`pip install -e ".[api]"`)
 
 ### Phase 3 — Integration Layer
 
@@ -314,12 +326,11 @@ LineageHub/
 - Link pipeline failures with affected datasets
 - Support richer metadata from external systems
 
-### Phase 4 — API and Visualization
+### Phase 4 — Visualization and assistant UX
 
-- Add FastAPI endpoints
-- Add simple graph visualization
-- Provide API responses for upstream, downstream, and impact queries
-- Prepare integration with a natural-language metadata assistant
+- Authenticated or multi-tenant API deployment (today’s API is local read-only)
+- Simple graph visualization in the browser
+- Deeper wiring to a natural-language metadata assistant (see [integration plan](docs/integration_plan.md))
 
 ---
 
@@ -332,6 +343,15 @@ Install in editable mode (includes dev dependencies such as pytest):
 ```bash
 pip install -e ".[dev]"
 ```
+
+Optional **read-only HTTP API** (FastAPI + Uvicorn), same SQLite resolution as the CLI (`LINEAGEHUB_DB` or `./lineagehub.db`):
+
+```bash
+pip install -e ".[api]"
+LINEAGEHUB_DB=./lineagehub.db uvicorn lineagehub.api:app --reload
+```
+
+Example endpoints (response JSON matches CLI `--json` payloads): `GET /health`, `GET /datasets`, `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /runs/{run_id}/impact`.
 
 Load the sample lineage file into the default SQLite database (`./lineagehub.db`, unless overridden):
 
@@ -391,7 +411,7 @@ lineagehub --db /tmp/lineage.db load examples/sample_lineage.json
 LINEAGEHUB_DB=/tmp/lineage.db lineagehub impact raw_orders
 ```
 
-Run tests from the repository root:
+Run tests from the repository root. API tests require FastAPI (install **`[api]`** alongside **`[dev]`**, or use `pip install -e ".[dev,api]"`):
 
 ```bash
 pytest
@@ -415,7 +435,7 @@ Planned stack:
 - Typer or argparse for CLI
 - Pydantic or dataclasses for metadata models
 - pytest for testing
-- FastAPI in later phases
+- Optional FastAPI + Uvicorn read-only API (`pip install -e ".[api]"`)
 
 ---
 
@@ -441,9 +461,9 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**MVP (local CLI):** metadata models, SQLite store, JSON loader, graph traversal (upstream / downstream / impact), CLI commands, and pytest coverage for the store and graph layers.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), graph traversal with **`--depth`** / **`--json`**, **`graph`** export (text / Mermaid / DOT), **`impact-run`**, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
 
-Out of scope for this milestone: web UI, API server, and live lineage capture (see roadmap below).
+**Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators (see roadmap).
 
 ---
 

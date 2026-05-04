@@ -1,5 +1,7 @@
 # LineageHub Roadmap
 
+This file tracks the original phased plan. Several Phase 2 and Phase 4 items now exist in code (CLI depth/JSON, graph export, runs loader, `impact-run`, optional FastAPI); see the README **Current Status** for what is implemented today.
+
 ## Phase 1 — Local Lineage MVP
 
 Goal: Build a small but complete CLI-based lineage system.
@@ -69,22 +71,13 @@ Example questions:
 
 Goal: Expose lineage metadata through service endpoints and basic visualization.
 
-Planned work:
+**Shipped (minimal):** read-only FastAPI app with JSON payloads aligned to the CLI (`GET /datasets/{name}/upstream`, `/downstream`, `/impact`, `/runs/{run_id}/impact`, `/health`, `/datasets`).
 
-- Add FastAPI service
-- Add endpoints for upstream, downstream, and impact analysis
-- Add JSON responses for graph traversal results
-- Add simple graph export format
-- Add optional visualization prototype
+Remaining planned work:
 
-Possible endpoints:
-
-```text
-GET /datasets/{name}/upstream
-GET /datasets/{name}/downstream
-GET /datasets/{name}/impact
-GET /graph/{name}
-```
+- Authenticated or multi-tenant deployment
+- Browser graph visualization
+- Richer graph-specific HTTP endpoints beyond CLI parity (optional)
 
 ---
 
