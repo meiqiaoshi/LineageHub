@@ -19,7 +19,7 @@ SQLite Metadata Store
         ↓
 Graph Query Layer
         ↓
-CLI / Future API
+CLI / optional read-only HTTP API
 ```
 
 ## Main Components
@@ -40,7 +40,7 @@ Responsibilities:
 
 The metadata store persists all lineage-related information.
 
-The MVP will use SQLite because it is simple, local, and easy to inspect.
+The store uses SQLite because it is simple, local, and easy to inspect.
 
 Main stored entities:
 
@@ -68,29 +68,33 @@ It supports:
 
 ### 4. CLI
 
-The CLI is the first user interface for LineageHub.
+The primary interface is an **argparse**-based CLI.
 
-Planned commands:
+Core commands (non-exhaustive):
 
 ```bash
 lineagehub load examples/sample_lineage.json
+lineagehub load-runs examples/sample_runs.json
 lineagehub upstream mart_daily_sales
 lineagehub downstream raw_orders
 lineagehub impact raw_orders
+lineagehub impact-run run_001
 lineagehub graph mart_daily_sales
 ```
 
-### 5. Future API Layer
+### 5. Optional API layer
 
-A future FastAPI layer can expose lineage queries to external tools, dashboards, or a natural-language metadata assistant.
+An optional **FastAPI** app (`lineagehub.api`) exposes the same structured JSON as **`--json`** CLI output. Install with `pip install -e ".[api]"` and run with Uvicorn.
 
-Possible endpoints:
+Example endpoints:
 
 ```text
+GET /health
+GET /datasets
 GET /datasets/{name}/upstream
 GET /datasets/{name}/downstream
 GET /datasets/{name}/impact
-GET /jobs/{name}/runs
+GET /runs/{run_id}/impact
 ```
 
 ---
@@ -99,7 +103,7 @@ GET /jobs/{name}/runs
 
 ### Local First
 
-The MVP should work without cloud services, containers, or external databases.
+The default workflow runs without cloud services, containers, or external databases.
 
 ### Metadata Driven
 
@@ -115,7 +119,7 @@ The system should be designed so future versions can import metadata from ingest
 
 ---
 
-## MVP Data Flow
+## Example data flow
 
 ```text
 sample_lineage.json
@@ -124,9 +128,9 @@ lineagehub load
       ↓
 SQLite tables
       ↓
-lineagehub upstream / downstream / impact
+lineagehub upstream / downstream / impact / graph
       ↓
-Readable CLI output
+CLI text or JSON — or HTTP GET via optional API
 ```
 
 ---

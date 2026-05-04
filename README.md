@@ -139,10 +139,10 @@ Metadata Store
       ↓
 Lineage Graph Engine
       ↓
-CLI / API / Future UI
+CLI / optional read-only API / future UI
 ```
 
-LineageHub will initially use a local SQLite database for metadata storage. The graph engine will query dataset relationships from the metadata store and perform upstream, downstream, and impact analysis.
+The default metadata store is local **SQLite**. The graph engine queries dataset relationships from the store and performs upstream, downstream, and impact analysis.
 
 ---
 
@@ -199,28 +199,20 @@ This means `clean_orders` depends on `raw_orders`.
 
 ---
 
-## Initial MVP Scope
+## Product scope
 
-The first version of LineageHub will focus on a simple but complete local workflow.
+**Phase 1** established a local workflow: metadata models, SQLite, JSON lineage loading, upstream/downstream/impact queries, and pytest coverage.
 
-### MVP Features
+**Phase 2** added pipeline runs (`load-runs`), run-aware downstream impact (`impact-run`), CLI **`--depth`** / **`--json`**, **`graph`** export, and an optional read-only HTTP API. The authoritative list of what exists today is under **Current Status** near the end of this README.
 
-- Define metadata models for datasets, jobs, runs, and lineage edges
-- Store metadata in SQLite
-- Load sample lineage definitions from JSON
-- Query upstream dependencies
-- Query downstream dependencies
-- Run impact analysis from the CLI
-- Add basic tests for graph traversal logic
-
-### Out of Scope for MVP
+### Still out of scope
 
 - Full web UI
-- Real-time lineage capture
-- Authentication
+- Real-time lineage capture from orchestrators
+- Authentication and multi-tenant deployment
 - Distributed execution
-- Complex OpenLineage compatibility
-- Production-grade deployment
+- Full OpenLineage compatibility
+- Production-grade operations (HA, audit logging, and similar)
 
 These may be added in later phases.
 
@@ -336,7 +328,7 @@ LineageHub/
 
 ## Local setup and usage
 
-Requirements: **Python 3.10+**.
+Requirements: **Python 3.10+** (create the virtualenv with that interpreter, e.g. `python3.12 -m venv .venv`, so `pip install -e ".[dev]"` succeeds).
 
 Install in editable mode (includes dev dependencies such as pytest):
 
@@ -428,14 +420,12 @@ PYTHONPATH=src python -m lineagehub load examples/sample_lineage.json
 
 ## Technology Stack
 
-Planned stack:
-
-- Python
+- Python 3.10+
 - SQLite
-- Typer or argparse for CLI
-- Pydantic or dataclasses for metadata models
-- pytest for testing
-- Optional FastAPI + Uvicorn read-only API (`pip install -e ".[api]"`)
+- **argparse** CLI (`lineagehub` entry point)
+- **Dataclasses** for metadata models
+- **pytest** for tests (install with **`[dev]`**)
+- Optional **FastAPI** + **Uvicorn** read-only API (install with **`[api]`**)
 
 ---
 
