@@ -144,3 +144,11 @@ Potential future extensions include:
 - Adding natural-language query support through Orion Data Copilot
 - Exporting lineage data in OpenLineage-like event format
 - Adding a simple graph visualization UI
+
+---
+
+## Related documentation
+
+- [Metadata model](metadata_model.md) — entities and SQLite tables
+- [Roadmap](roadmap.md) — phased goals
+- [Integration plan](integration_plan.md) — portfolio alignment (future connectors)

@@ -1,6 +1,6 @@
 # Integration Plan (Portfolio Alignment)
 
-This document describes how LineageHub could connect with other portfolio-style components. **Nothing here is implemented yet**; it is a design sketch for future work.
+This document describes how LineageHub could connect with other portfolio-style components. **Connectors and multi-system sync described below are not implemented.** LineageHub already ships a **read-only HTTP API** (`lineagehub.api`) that a future assistant or dashboard could call; this file focuses on *cross-repo* integration patterns.
 
 ## Role of LineageHub
 

@@ -4,7 +4,7 @@
 
 LineageHub stores metadata about datasets, jobs, runs, and lineage edges.
 
-The MVP focuses on dataset-level lineage. A dataset can depend on one or more upstream datasets, and one upstream dataset can affect many downstream datasets.
+The model centers on **dataset-level** lineage. A dataset can depend on one or more upstream datasets, and one upstream dataset can affect many downstream datasets.
 
 ---
 
@@ -92,14 +92,15 @@ Suggested fields:
 
 | Field | Description |
 |---|---|
-| run_id | Internal unique identifier |
+| run_id | Internal unique identifier (SQLite row id) |
+| external_run_id | Optional stable id from an external system (JSON field `run_id` in `load-runs`); unique when set |
 | job_id | Job associated with the run |
 | status | success, failed, running, skipped |
 | started_at | Run start time |
 | ended_at | Run end time |
 | error_message | Optional failure message |
 
-Runs are not required for the earliest graph-only MVP, but they become important for impact analysis.
+Runs are optional for dataset-only graph queries; they enable **run-aware** downstream impact (`impact-run`) when loaded via `lineagehub load-runs`.
 
 ---
 
@@ -127,9 +128,9 @@ Suggested fields:
 
 ---
 
-## MVP SQLite Tables
+## SQLite tables (reference)
 
-A possible first schema:
+Schema matches `src/lineagehub/store.py` (`SCHEMA_SQL` plus migrations):
 
 ```sql
 CREATE TABLE IF NOT EXISTS datasets (
@@ -158,8 +159,10 @@ CREATE TABLE IF NOT EXISTS runs (
     started_at TEXT,
     ended_at TEXT,
     error_message TEXT,
+    external_run_id TEXT,
     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
 );
+-- Partial unique index: idx_runs_external_run_id on external_run_id WHERE NOT NULL
 
 CREATE TABLE IF NOT EXISTS lineage_edges (
     edge_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -197,3 +200,10 @@ clean_orders
 mart_daily_sales
 sales_dashboard
 ```
+
+---
+
+## Related documentation
+
+- [System design](system_design.md) — loaders, store, CLI, and optional API
+- [Roadmap](roadmap.md) — future phases

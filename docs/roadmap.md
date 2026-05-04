@@ -31,7 +31,11 @@ Success criteria:
 
 Goal: Connect lineage relationships with pipeline execution status.
 
-Planned work:
+**Delivered in code:** run records with status and `external_run_id` from `load-runs`, `impact-run` (downstream from a run’s job outputs), plus supporting CLI flags and optional API `GET /runs/{run_id}/impact`.
+
+**Not delivered yet:** a “recent failures” or job listing command (roll-up of latest failed runs across jobs).
+
+Original planned work:
 
 - Add run records for jobs
 - Store run status and error messages
@@ -50,6 +54,8 @@ Example questions:
 ## Phase 3 — Integration Layer
 
 Goal: Make LineageHub connect with other data platform tools.
+
+Sketch-level alignment with named systems is in [integration_plan.md](integration_plan.md).
 
 Planned work:
 

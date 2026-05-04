@@ -61,7 +61,7 @@ The main goals of LineageHub are:
 1. Track datasets, jobs, and pipeline runs in a metadata store
 2. Represent upstream and downstream dataset dependencies as a graph
 3. Support impact analysis when a dataset or pipeline fails
-4. Provide a simple CLI for querying lineage relationships
+4. Provide a simple CLI and optional read-only HTTP API for querying lineage relationships
 5. Build a foundation that can later integrate with ingestion, data quality, and natural-language metadata tools
 
 ---
@@ -99,22 +99,37 @@ Downstream assets affected by raw_orders:
 - sales_dashboard
 ```
 
-### 3. Show lineage graph for a dataset
+### 3. Export lineage edges for a dataset (default: downstream, all hops)
+
+Using **`examples/sample_lineage.json`**, downstream from the root dataset lists every hop toward dashboards:
 
 ```bash
-lineagehub graph mart_daily_sales
+lineagehub graph raw_orders
 ```
 
-Example output:
+Example output (text mode sorts edges by upstream then downstream name):
 
 ```text
-raw_orders -> clean_orders -> mart_daily_sales
+clean_orders -> mart_daily_sales
+mart_daily_sales -> sales_dashboard
+raw_orders -> clean_orders
 ```
+
+From **`mart_daily_sales`**, default downstream only reaches **`sales_dashboard`**; use **`--direction upstream`** (or start from **`raw_orders`**) to print the full subgraph as above.
 
 ### 4. Load lineage metadata from a file
 
 ```bash
 lineagehub load examples/sample_lineage.json
+```
+
+### 5. Load pipeline runs and inspect run-aware impact
+
+After lineage is loaded, run records can be ingested and queried by external id:
+
+```bash
+lineagehub load-runs examples/sample_runs.json
+lineagehub impact-run run_001
 ```
 
 ---
@@ -128,7 +143,7 @@ lineagehub load examples/sample_lineage.json
 
 ---
 
-## Planned Architecture
+## Architecture (overview)
 
 ```text
 Pipeline Metadata
@@ -176,14 +191,14 @@ Examples:
 
 A run is one execution of a job.
 
-A run may have:
+Stored per run (see also [metadata model](docs/metadata_model.md)):
 
 - status
-- start time
-- end time
-- error message
-- input datasets
-- output datasets
+- start and end time
+- optional error message
+- optional **`external_run_id`** (from `load-runs` JSON `run_id`)
+
+Input and output datasets are defined on the **job**, not duplicated on each run row; **`impact-run`** uses the job’s output datasets as seeds for downstream traversal.
 
 ### Lineage Edge
 
@@ -218,7 +233,9 @@ These may be added in later phases.
 
 ---
 
-## Example Lineage Definition
+## Example lineage definition
+
+The checked-in file **`examples/sample_lineage.json`** defines the graph used above (including **`sales_dashboard`** and the job that produces it). Inline copy for reference:
 
 ```json
 {
@@ -237,6 +254,11 @@ These may be added in later phases.
       "name": "mart_daily_sales",
       "type": "table",
       "uri": "duckdb://warehouse/mart_daily_sales"
+    },
+    {
+      "name": "sales_dashboard",
+      "type": "dashboard",
+      "uri": "dashboard://sales/daily"
     }
   ],
   "jobs": [
@@ -249,6 +271,11 @@ These may be added in later phases.
       "name": "daily_sales_job",
       "inputs": ["clean_orders"],
       "outputs": ["mart_daily_sales"]
+    },
+    {
+      "name": "sales_dashboard_refresh",
+      "inputs": ["mart_daily_sales"],
+      "outputs": ["sales_dashboard"]
     }
   ]
 }
@@ -256,7 +283,7 @@ These may be added in later phases.
 
 ---
 
-## Planned Project Structure
+## Repository layout
 
 ```text
 LineageHub/
