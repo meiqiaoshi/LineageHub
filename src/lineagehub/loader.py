@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from itertools import product
 from pathlib import Path
 from typing import Any
 
-from lineagehub.models import Dataset, Job, LineageEdge
+from lineagehub.models import Dataset, Job, LineageEdge, Run
 from lineagehub.store import MetadataStore
 
 
@@ -83,6 +84,50 @@ def load_lineage_json(store: MetadataStore, path: str | Path) -> None:
                     job_id=job_id,
                 )
             )
+
+
+def load_runs_json(store: MetadataStore, path: str | Path) -> None:
+    """Load pipeline run rows from JSON (``runs`` array). Each entry needs ``run_id`` (external id string), ``job_name``, and ``status``."""
+    raw = Path(path).read_text(encoding="utf-8")
+    data = json.loads(raw)
+    _expect_dict(data, "root")
+    runs = data.get("runs")
+    if not isinstance(runs, list):
+        raise ValueError("'runs' must be a list")
+    store.init_schema()
+
+    for item in runs:
+        _expect_dict(item, "run entry")
+        external_id = item.get("run_id")
+        job_name = item.get("job_name")
+        status = item.get("status")
+        if not external_id or not isinstance(external_id, str):
+            raise ValueError("each run requires a non-empty string 'run_id'")
+        if not job_name or not isinstance(job_name, str):
+            raise ValueError(f"run {external_id!r} requires string 'job_name'")
+        if not status or not isinstance(status, str):
+            raise ValueError(f"run {external_id!r} requires string 'status'")
+
+        job = store.get_job_by_name(job_name)
+        if job is None or job.job_id is None:
+            raise ValueError(f"run {external_id!r}: unknown job {job_name!r}")
+
+        run = Run(
+            job_id=job.job_id,
+            status=status,
+            external_run_id=external_id,
+            started_at=item.get("started_at") if isinstance(item.get("started_at"), str) else None,
+            ended_at=item.get("ended_at") if isinstance(item.get("ended_at"), str) else None,
+            error_message=(
+                item.get("error_message") if isinstance(item.get("error_message"), str) else None
+            ),
+        )
+        try:
+            store.insert_run(run)
+        except sqlite3.IntegrityError as e:
+            raise ValueError(
+                f"run {external_id!r}: could not insert (duplicate run_id or invalid data)"
+            ) from e
 
 
 def _expect_dict(obj: Any, label: str) -> dict[str, Any]:

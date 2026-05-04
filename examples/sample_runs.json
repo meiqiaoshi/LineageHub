@@ -1,0 +1,12 @@
+{
+  "runs": [
+    {
+      "run_id": "run_001",
+      "job_name": "clean_orders_job",
+      "status": "failed",
+      "started_at": "2026-05-01T09:00:00Z",
+      "ended_at": "2026-05-01T09:03:00Z",
+      "error_message": "Source dataset raw_orders was stale"
+    }
+  ]
+}

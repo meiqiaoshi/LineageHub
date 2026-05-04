@@ -48,6 +48,17 @@ def test_insert_run_foreign_key(empty_store: MetadataStore) -> None:
         empty_store.insert_run(Run(job_id=999999, status="failed"))
 
 
+def test_insert_run_with_external_id_roundtrip(empty_store: MetadataStore) -> None:
+    jid = empty_store.upsert_job(Job(name="job1"))
+    empty_store.insert_run(
+        Run(job_id=jid, status="success", external_run_id="ext-1", started_at="2026-01-01T00:00:00Z")
+    )
+    run = empty_store.get_run_by_external_id("ext-1")
+    assert run is not None
+    assert run.status == "success"
+    assert run.external_run_id == "ext-1"
+
+
 def test_lineage_edge_idempotent_and_foreign_keys(empty_store: MetadataStore) -> None:
     a = empty_store.upsert_dataset(Dataset(name="a"))
     b = empty_store.upsert_dataset(Dataset(name="b"))

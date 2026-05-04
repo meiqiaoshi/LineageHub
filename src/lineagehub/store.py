@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS runs (
     started_at TEXT,
     ended_at TEXT,
     error_message TEXT,
+    external_run_id TEXT,
     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
 );
 
@@ -55,6 +56,16 @@ CREATE TABLE IF NOT EXISTS lineage_edges (
     UNIQUE (upstream_dataset_id, downstream_dataset_id, job_id)
 );
 """
+
+
+def _apply_runs_migrations(conn: sqlite3.Connection) -> None:
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
+    if "external_run_id" not in cols:
+        conn.execute("ALTER TABLE runs ADD COLUMN external_run_id TEXT")
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_runs_external_run_id "
+        "ON runs(external_run_id) WHERE external_run_id IS NOT NULL"
+    )
 
 
 class MetadataStore:
@@ -73,6 +84,7 @@ class MetadataStore:
         conn = self.connect()
         try:
             conn.executescript(SCHEMA_SQL)
+            _apply_runs_migrations(conn)
             conn.commit()
         finally:
             conn.close()
@@ -145,16 +157,35 @@ class MetadataStore:
             conn.close()
 
     def insert_run(self, run: Run) -> int:
-        """Insert a run; returns run_id."""
+        """Insert a run; returns internal numeric ``run_id``."""
         conn = self.connect()
         try:
+            _apply_runs_migrations(conn)
             cur = conn.execute(
-                """INSERT INTO runs (job_id, status, started_at, ended_at, error_message)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (run.job_id, run.status, run.started_at, run.ended_at, run.error_message),
+                """INSERT INTO runs (job_id, status, started_at, ended_at, error_message, external_run_id)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    run.job_id,
+                    run.status,
+                    run.started_at,
+                    run.ended_at,
+                    run.error_message,
+                    run.external_run_id,
+                ),
             )
             conn.commit()
             return int(cur.lastrowid)
+        finally:
+            conn.close()
+
+    def get_run_by_external_id(self, external_run_id: str) -> Run | None:
+        conn = self.connect()
+        try:
+            _apply_runs_migrations(conn)
+            row = conn.execute(
+                "SELECT * FROM runs WHERE external_run_id = ?", (external_run_id,)
+            ).fetchone()
+            return None if row is None else _row_to_run(row)
         finally:
             conn.close()
 
@@ -264,6 +295,18 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         description=row["description"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+    )
+
+
+def _row_to_run(row: sqlite3.Row) -> Run:
+    return Run(
+        run_id=int(row["run_id"]),
+        job_id=int(row["job_id"]),
+        status=str(row["status"]),
+        external_run_id=row["external_run_id"],
+        started_at=row["started_at"],
+        ended_at=row["ended_at"],
+        error_message=row["error_message"],
     )
 
 

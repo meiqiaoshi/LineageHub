@@ -18,7 +18,7 @@ from lineagehub.graph import (
     lineage_impact_results,
     lineage_upstream_results,
 )
-from lineagehub.loader import load_lineage_json
+from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
     downstream_payload,
     dumps_json,
@@ -47,6 +47,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_load = sub.add_parser("load", help="Load lineage metadata from a JSON file")
     p_load.add_argument("path", type=Path, help="Path to lineage JSON")
+
+    p_load_runs = sub.add_parser("load-runs", help="Load pipeline run records from a JSON file")
+    p_load_runs.add_argument("path", type=Path, help="Path to runs JSON")
 
     depth_opt = {
         "choices": ["direct", "all"],
@@ -93,6 +96,10 @@ def main(argv: list[str] | None = None) -> int:
             case "load":
                 load_lineage_json(store, args.path)
                 print(f"Loaded lineage metadata from {args.path} into {db_path.resolve()}")
+                return 0
+            case "load-runs":
+                load_runs_json(store, args.path)
+                print(f"Loaded runs from {args.path} into {db_path.resolve()}")
                 return 0
             case "upstream":
                 if args.json:

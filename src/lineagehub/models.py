@@ -45,6 +45,7 @@ class Run:
     job_id: int
     status: str
     run_id: int | None = None
+    external_run_id: str | None = None
     started_at: str | None = None
     ended_at: str | None = None
     error_message: str | None = None

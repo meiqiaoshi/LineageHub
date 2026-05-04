@@ -262,7 +262,8 @@ LineageHub/
 ├── README.md
 ├── pyproject.toml
 ├── examples/
-│   └── sample_lineage.json
+│   ├── sample_lineage.json
+│   └── sample_runs.json
 ├── docs/
 │   ├── system_design.md
 │   ├── metadata_model.md
@@ -282,7 +283,8 @@ LineageHub/
     ├── test_graph.py
     ├── test_loader.py
     ├── test_cli_json.py
-    └── test_formatters.py
+    ├── test_formatters.py
+    └── test_runs_loader.py
 ```
 
 ---
@@ -337,6 +339,12 @@ lineagehub load examples/sample_lineage.json
 lineagehub upstream mart_daily_sales
 lineagehub downstream raw_orders
 lineagehub impact raw_orders
+```
+
+Load **pipeline runs** (after jobs exist from lineage JSON). External id is the JSON field `run_id`; it is stored as `external_run_id` in SQLite:
+
+```bash
+lineagehub load-runs examples/sample_runs.json
 ```
 
 For **upstream** and **downstream**, control whether to show only **immediate** neighbors or the **full transitive** closure:

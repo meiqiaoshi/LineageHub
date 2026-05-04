@@ -11,6 +11,7 @@ from lineagehub.store import MetadataStore
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_LINEAGE_JSON = REPO_ROOT / "examples" / "sample_lineage.json"
+SAMPLE_RUNS_JSON = REPO_ROOT / "examples" / "sample_runs.json"
 
 
 @pytest.fixture

@@ -11,7 +11,7 @@ from lineagehub.graph import (
     lineage_impact_results,
     lineage_upstream_results,
 )
-from lineagehub.loader import load_lineage_json
+from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.models import Dataset, Job, LineageEdge, LineageResult, Run
 from lineagehub.store import MetadataStore
 
@@ -25,6 +25,7 @@ __all__ = [
     "Run",
     "MetadataStore",
     "load_lineage_json",
+    "load_runs_json",
     "get_direct_upstream",
     "get_direct_downstream",
     "get_upstream",
