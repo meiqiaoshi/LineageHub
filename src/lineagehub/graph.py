@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from typing import Literal
 
-from lineagehub.models import LineageEdge, LineageResult
+from lineagehub.models import LineageEdge, LineageResult, RunImpactAnalysis, RunImpactRow
 from lineagehub.store import MetadataStore
 
 DepthSpec = Literal["direct", "all"]
@@ -84,6 +84,49 @@ def lineage_impact_results(
 ) -> list[LineageResult]:
     """Dataset-level impact as downstream closure with distances."""
     return lineage_downstream_results(store, dataset_name, depth=depth)
+
+
+def analyze_run_impact(store: MetadataStore, external_run_id: str) -> RunImpactAnalysis:
+    """Transitive downstream impact starting from the job's output datasets for one run."""
+    ctx = store.fetch_run_context_by_external_id(external_run_id)
+    if ctx is None:
+        raise ValueError(f"Unknown run: {external_run_id!r}")
+
+    output_ids = store.list_output_dataset_ids_for_job(ctx.job_id)
+    id_to_name = _id_to_name_map(store)
+    outputs_sorted = tuple(sorted(id_to_name[i] for i in output_ids))
+    forward = _build_forward_adjacency(store.list_lineage_edges())
+    seed_ids = set(output_ids)
+
+    queue: deque[tuple[int, int, str]] = deque()
+    for sid in sorted(output_ids, key=lambda i: id_to_name[i]):
+        sname = id_to_name[sid]
+        for nid in sorted(set(forward.get(sid, [])), key=lambda i: id_to_name[i]):
+            queue.append((nid, 1, sname))
+
+    visited: set[int] = set(seed_ids)
+    affected_list: list[RunImpactRow] = []
+
+    while queue:
+        nid, dist, src_name = queue.popleft()
+        if nid in visited:
+            continue
+        visited.add(nid)
+        affected_list.append(
+            RunImpactRow(name=id_to_name[nid], distance=dist, source_output=src_name)
+        )
+        for nxt in sorted(set(forward.get(nid, [])), key=lambda i: id_to_name[i]):
+            if nxt not in visited:
+                queue.append((nxt, dist + 1, src_name))
+
+    return RunImpactAnalysis(
+        external_run_id=external_run_id,
+        job_name=ctx.job_name,
+        status=ctx.status,
+        error_message=ctx.error_message,
+        output_datasets=outputs_sorted,
+        affected=tuple(affected_list),
+    )
 
 
 def collect_graph_edges(

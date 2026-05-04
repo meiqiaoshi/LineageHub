@@ -38,6 +38,27 @@ class LineageResult:
     distance: int
 
 
+@dataclass(frozen=True)
+class RunImpactRow:
+    """One downstream dataset affected by outputs of a failed (or risky) job run."""
+
+    name: str
+    distance: int
+    source_output: str
+
+
+@dataclass(frozen=True)
+class RunImpactAnalysis:
+    """Downstream blast radius from a job's output datasets for one run."""
+
+    external_run_id: str
+    job_name: str
+    status: str
+    error_message: str | None
+    output_datasets: tuple[str, ...]
+    affected: tuple[RunImpactRow, ...]
+
+
 @dataclass
 class Run:
     """One execution of a job."""

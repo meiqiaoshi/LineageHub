@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from lineagehub.graph import (
+    analyze_run_impact,
     collect_graph_edges,
     get_direct_downstream,
     get_direct_upstream,
@@ -26,6 +27,7 @@ from lineagehub.output import (
     format_edges_mermaid,
     format_edges_text,
     impact_payload,
+    run_impact_payload,
     upstream_payload,
 )
 from lineagehub.store import MetadataStore
@@ -86,6 +88,13 @@ def main(argv: list[str] | None = None) -> int:
         default="text",
         help="Output format (default: text)",
     )
+
+    p_impact_run = sub.add_parser(
+        "impact-run",
+        help="Downstream impact starting from a recorded pipeline run's outputs",
+    )
+    p_impact_run.add_argument("run_id", help="External run id (e.g. run_001)")
+    p_impact_run.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     args = parser.parse_args(argv)
     db_path = Path(args.db)
@@ -154,6 +163,23 @@ def main(argv: list[str] | None = None) -> int:
                         sys.stdout.write(format_edges_dot(edges))
                     case _:
                         raise RuntimeError(f"unhandled format: {args.format!r}")
+                return 0
+            case "impact-run":
+                analysis = analyze_run_impact(store, args.run_id)
+                if args.json:
+                    sys.stdout.write(dumps_json(run_impact_payload(analysis)))
+                    return 0
+                print(f"Run impact analysis for {analysis.external_run_id}\n")
+                print(f"Job: {analysis.job_name}")
+                print(f"Status: {analysis.status}")
+                if analysis.error_message:
+                    print(f"Error: {analysis.error_message}")
+                print()
+                print("Failed or affected output datasets:")
+                _print_bullets(list(analysis.output_datasets))
+                print()
+                print("Downstream affected datasets:")
+                _print_bullets([r.name for r in analysis.affected])
                 return 0
             case _:
                 raise RuntimeError(f"unhandled command: {args.command!r}")

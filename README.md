@@ -284,7 +284,8 @@ LineageHub/
     ├── test_loader.py
     ├── test_cli_json.py
     ├── test_formatters.py
-    └── test_runs_loader.py
+    ├── test_runs_loader.py
+    └── test_impact_run.py
 ```
 
 ---
@@ -345,6 +346,13 @@ Load **pipeline runs** (after jobs exist from lineage JSON). External id is the 
 
 ```bash
 lineagehub load-runs examples/sample_runs.json
+```
+
+**Run-aware impact:** from a recorded run, expand downstream from that job’s **output datasets** (failed runs treat outputs as risky; impact is transitive downstream, with hop distance and originating output in JSON):
+
+```bash
+lineagehub impact-run run_001
+lineagehub impact-run run_001 --json
 ```
 
 For **upstream** and **downstream**, control whether to show only **immediate** neighbors or the **full transitive** closure:

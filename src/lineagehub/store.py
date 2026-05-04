@@ -6,6 +6,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dataclasses import dataclass
+
 from lineagehub.models import Dataset, Job, LineageEdge, Run
 
 
@@ -56,6 +58,20 @@ CREATE TABLE IF NOT EXISTS lineage_edges (
     UNIQUE (upstream_dataset_id, downstream_dataset_id, job_id)
 );
 """
+
+
+@dataclass(frozen=True)
+class RunContext:
+    """Resolved run plus job name for operational queries."""
+
+    external_run_id: str
+    internal_run_id: int
+    job_id: int
+    job_name: str
+    status: str
+    started_at: str | None
+    ended_at: str | None
+    error_message: str | None
 
 
 def _apply_runs_migrations(conn: sqlite3.Connection) -> None:
@@ -189,6 +205,31 @@ class MetadataStore:
         finally:
             conn.close()
 
+    def fetch_run_context_by_external_id(self, external_run_id: str) -> RunContext | None:
+        conn = self.connect()
+        try:
+            _apply_runs_migrations(conn)
+            row = conn.execute(
+                """SELECT runs.*, jobs.name AS job_name FROM runs
+                   INNER JOIN jobs ON runs.job_id = jobs.job_id
+                   WHERE runs.external_run_id = ?""",
+                (external_run_id,),
+            ).fetchone()
+            return None if row is None else _row_to_run_context(row)
+        finally:
+            conn.close()
+
+    def list_output_dataset_ids_for_job(self, job_id: int) -> list[int]:
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT downstream_dataset_id FROM lineage_edges WHERE job_id = ?",
+                (job_id,),
+            ).fetchall()
+            return [int(r["downstream_dataset_id"]) for r in rows]
+        finally:
+            conn.close()
+
     def insert_lineage_edge(self, edge: LineageEdge) -> int:
         """Insert an edge if missing (unique on upstream, downstream, job_id); returns edge_id."""
         now = utc_now_iso()
@@ -304,6 +345,19 @@ def _row_to_run(row: sqlite3.Row) -> Run:
         job_id=int(row["job_id"]),
         status=str(row["status"]),
         external_run_id=row["external_run_id"],
+        started_at=row["started_at"],
+        ended_at=row["ended_at"],
+        error_message=row["error_message"],
+    )
+
+
+def _row_to_run_context(row: sqlite3.Row) -> RunContext:
+    return RunContext(
+        external_run_id=str(row["external_run_id"]),
+        internal_run_id=int(row["run_id"]),
+        job_id=int(row["job_id"]),
+        job_name=str(row["job_name"]),
+        status=str(row["status"]),
         started_at=row["started_at"],
         ended_at=row["ended_at"],
         error_message=row["error_message"],

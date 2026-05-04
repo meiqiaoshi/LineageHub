@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any
 
-from lineagehub.models import LineageResult
+from lineagehub.models import LineageResult, RunImpactAnalysis
 
 
 def dumps_json(data: dict[str, Any]) -> str:
@@ -40,6 +40,26 @@ def impact_payload(dataset: str, items: list[LineageResult]) -> dict[str, Any]:
         "impact_type": "transitive_downstream",
         "affected_count": len(items),
         "affected_datasets": [{"name": x.name, "distance": x.distance} for x in items],
+    }
+
+
+def run_impact_payload(analysis: RunImpactAnalysis) -> dict[str, Any]:
+    return {
+        "query_type": "run_impact",
+        "run_id": analysis.external_run_id,
+        "job": analysis.job_name,
+        "status": analysis.status,
+        "error_message": analysis.error_message,
+        "affected_count": len(analysis.affected),
+        "output_datasets": list(analysis.output_datasets),
+        "affected_datasets": [
+            {
+                "name": r.name,
+                "distance": r.distance,
+                "source_output": r.source_output,
+            }
+            for r in analysis.affected
+        ],
     }
 
 
