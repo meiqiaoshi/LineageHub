@@ -66,6 +66,10 @@ def main(argv: list[str] | None = None) -> int:
     p_runs_list.add_argument("--limit", type=int, help="Max number of runs to return")
     p_runs_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
+    p_runs_latest = runs_sub.add_parser("latest", help="Show the most recent run for a job")
+    p_runs_latest.add_argument("--job", required=True, help="Job name")
+    p_runs_latest.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
     depth_opt = {
         "choices": ["direct", "all"],
         "default": "all",
@@ -159,6 +163,28 @@ def main(argv: list[str] | None = None) -> int:
                                 print(f"  Started: {r.started_at}")
                             if r.ended_at is not None:
                                 print(f"  Ended: {r.ended_at}")
+                        return 0
+                    case "latest":
+                        latest = store.get_latest_run(args.job)
+                        if args.json:
+                            payload = {
+                                "query_type": "latest_run",
+                                "job_name": args.job,
+                                "run": _run_record_payload(latest) if latest is not None else None,
+                            }
+                            sys.stdout.write(dumps_json(payload))
+                            return 0
+
+                        print(f"Latest run for {args.job}:\n")
+                        if latest is None:
+                            print("(no runs)")
+                            return 0
+                        print(f"Run: {_run_display_id(latest)}")
+                        print(f"Status: {latest.status}")
+                        if latest.started_at is not None:
+                            print(f"Started: {latest.started_at}")
+                        if latest.ended_at is not None:
+                            print(f"Ended: {latest.ended_at}")
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled runs command: {args.runs_command!r}")
