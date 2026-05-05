@@ -286,6 +286,24 @@ class MetadataStore:
         finally:
             conn.close()
 
+    def get_latest_run(self, job_name: str) -> RunRecord | None:
+        """Most recent run for the named job, or ``None`` if the job is unknown or has no runs."""
+        conn = self.connect()
+        try:
+            _apply_runs_migrations(conn)
+            row = conn.execute(
+                """SELECT runs.run_id, runs.external_run_id, runs.job_id, jobs.name AS job_name,
+                          runs.status, runs.started_at, runs.ended_at, runs.error_message
+                   FROM runs INNER JOIN jobs ON runs.job_id = jobs.job_id
+                   WHERE jobs.name = ?
+                   ORDER BY (runs.started_at IS NULL) ASC, runs.started_at DESC, runs.run_id DESC
+                   LIMIT 1""",
+                (job_name,),
+            ).fetchone()
+            return None if row is None else _row_to_run_record(row)
+        finally:
+            conn.close()
+
     def list_output_dataset_ids_for_job(self, job_id: int) -> list[int]:
         conn = self.connect()
         try:

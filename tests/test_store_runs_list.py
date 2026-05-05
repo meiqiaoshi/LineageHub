@@ -127,3 +127,53 @@ def test_list_runs_newest_first(sample_store: MetadataStore) -> None:
     rows = sample_store.list_runs()
     assert [r.external_run_id for r in rows] == ["r_new", "r_old"]
 
+
+def test_get_latest_run_picks_newest_started_at(sample_store: MetadataStore) -> None:
+    _insert_run(
+        sample_store,
+        external_run_id="r_old",
+        job_name="clean_orders_job",
+        status="failed",
+        started_at="2026-05-01T09:00:00Z",
+    )
+    _insert_run(
+        sample_store,
+        external_run_id="r_new",
+        job_name="clean_orders_job",
+        status="success",
+        started_at="2026-05-01T12:00:00Z",
+    )
+    latest = sample_store.get_latest_run("clean_orders_job")
+    assert latest is not None
+    assert latest.external_run_id == "r_new"
+    assert latest.status == "success"
+
+
+def test_get_latest_run_same_started_at_tiebreak_by_internal_id(sample_store: MetadataStore) -> None:
+    ts = "2026-05-01T12:00:00Z"
+    _insert_run(
+        sample_store,
+        external_run_id="r_first",
+        job_name="clean_orders_job",
+        status="failed",
+        started_at=ts,
+    )
+    _insert_run(
+        sample_store,
+        external_run_id="r_second",
+        job_name="clean_orders_job",
+        status="success",
+        started_at=ts,
+    )
+    latest = sample_store.get_latest_run("clean_orders_job")
+    assert latest is not None
+    assert latest.external_run_id == "r_second"
+
+
+def test_get_latest_run_job_has_no_runs(sample_store: MetadataStore) -> None:
+    assert sample_store.get_latest_run("clean_orders_job") is None
+
+
+def test_get_latest_run_unknown_job(sample_store: MetadataStore) -> None:
+    assert sample_store.get_latest_run("nonexistent_job_xyz") is None
+
