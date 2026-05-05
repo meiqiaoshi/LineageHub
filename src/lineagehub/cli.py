@@ -30,7 +30,7 @@ from lineagehub.output import (
     run_impact_payload,
     upstream_payload,
 )
-from lineagehub.store import MetadataStore
+from lineagehub.store import MetadataStore, RunRecord
 
 
 def default_db_path() -> str:
@@ -52,6 +52,19 @@ def main(argv: list[str] | None = None) -> int:
 
     p_load_runs = sub.add_parser("load-runs", help="Load pipeline run records from a JSON file")
     p_load_runs.add_argument("path", type=Path, help="Path to runs JSON")
+
+    p_runs = sub.add_parser("runs", help="Operational queries over pipeline runs")
+    runs_sub = p_runs.add_subparsers(dest="runs_command", required=True)
+
+    p_runs_list = runs_sub.add_parser("list", help="List recent runs")
+    p_runs_list.add_argument("--status", help="Filter by run status (e.g. failed)")
+    p_runs_list.add_argument("--job", help="Filter by job name")
+    p_runs_list.add_argument(
+        "--since",
+        help="Only include runs with started_at >= SINCE (ISO-8601 string)",
+    )
+    p_runs_list.add_argument("--limit", type=int, help="Max number of runs to return")
+    p_runs_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     depth_opt = {
         "choices": ["direct", "all"],
@@ -110,6 +123,45 @@ def main(argv: list[str] | None = None) -> int:
                 load_runs_json(store, args.path)
                 print(f"Loaded runs from {args.path} into {db_path.resolve()}")
                 return 0
+            case "runs":
+                match args.runs_command:
+                    case "list":
+                        rows = store.list_runs(
+                            status=args.status,
+                            job_name=args.job,
+                            since=args.since,
+                            limit=args.limit,
+                        )
+                        if args.json:
+                            payload = {
+                                "query_type": "runs_list",
+                                "filters": {
+                                    "status": args.status,
+                                    "job": args.job,
+                                    "since": args.since,
+                                    "limit": args.limit,
+                                },
+                                "runs": [_run_record_payload(r) for r in rows],
+                            }
+                            sys.stdout.write(dumps_json(payload))
+                            return 0
+
+                        print("Recent runs:\n")
+                        if not rows:
+                            print("(none)")
+                            return 0
+                        for r in rows:
+                            rid = _run_display_id(r)
+                            print(f"- {rid}")
+                            print(f"  Job: {r.job_name}")
+                            print(f"  Status: {r.status}")
+                            if r.started_at is not None:
+                                print(f"  Started: {r.started_at}")
+                            if r.ended_at is not None:
+                                print(f"  Ended: {r.ended_at}")
+                        return 0
+                    case _:
+                        raise RuntimeError(f"unhandled runs command: {args.runs_command!r}")
             case "upstream":
                 if args.json:
                     items = lineage_upstream_results(store, args.dataset, depth=args.depth)
@@ -194,6 +246,20 @@ def _print_bullets(names: list[str]) -> None:
         return
     for name in names:
         print(f"- {name}")
+
+
+def _run_display_id(r: RunRecord) -> str:
+    return r.external_run_id if r.external_run_id is not None else str(r.internal_run_id)
+
+
+def _run_record_payload(r: RunRecord) -> dict:
+    return {
+        "run_id": _run_display_id(r),
+        "job_name": r.job_name,
+        "status": r.status,
+        "started_at": r.started_at,
+        "ended_at": r.ended_at,
+    }
 
 
 if __name__ == "__main__":
