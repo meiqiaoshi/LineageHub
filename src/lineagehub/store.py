@@ -74,6 +74,20 @@ class RunContext:
     error_message: str | None
 
 
+@dataclass(frozen=True)
+class RunRecord:
+    """One run row joined with job name for listings."""
+
+    internal_run_id: int
+    external_run_id: str | None
+    job_id: int
+    job_name: str
+    status: str
+    started_at: str | None
+    ended_at: str | None
+    error_message: str | None
+
+
 def _apply_runs_migrations(conn: sqlite3.Connection) -> None:
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
     if "external_run_id" not in cols:
@@ -219,6 +233,59 @@ class MetadataStore:
         finally:
             conn.close()
 
+    def list_runs(
+        self,
+        *,
+        status: str | None = None,
+        job_name: str | None = None,
+        since: str | None = None,
+        limit: int | None = None,
+    ) -> list[RunRecord]:
+        """
+        List runs ordered by most recent first.
+
+        Filters:
+        - status: match runs.status
+        - job_name: match jobs.name
+        - since: include runs with started_at >= since (ISO-8601 string)
+        - limit: max number of rows returned
+        """
+        conn = self.connect()
+        try:
+            _apply_runs_migrations(conn)
+            clauses: list[str] = []
+            params: list[object] = []
+
+            if status is not None:
+                clauses.append("runs.status = ?")
+                params.append(status)
+
+            if job_name is not None:
+                clauses.append("jobs.name = ?")
+                params.append(job_name)
+
+            if since is not None:
+                clauses.append("runs.started_at IS NOT NULL AND runs.started_at >= ?")
+                params.append(since)
+
+            where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+            limit_sql = " LIMIT ?" if limit is not None else ""
+            if limit is not None:
+                params.append(int(limit))
+
+            rows = conn.execute(
+                "SELECT runs.run_id, runs.external_run_id, runs.job_id, jobs.name AS job_name, "
+                "runs.status, runs.started_at, runs.ended_at, runs.error_message "
+                "FROM runs INNER JOIN jobs ON runs.job_id = jobs.job_id"
+                + where_sql
+                + " ORDER BY (runs.started_at IS NULL) ASC, runs.started_at DESC, runs.run_id DESC"
+                + limit_sql,
+                tuple(params),
+            ).fetchall()
+            return [_row_to_run_record(r) for r in rows]
+        finally:
+            conn.close()
+
     def list_output_dataset_ids_for_job(self, job_id: int) -> list[int]:
         conn = self.connect()
         try:
@@ -355,6 +422,19 @@ def _row_to_run_context(row: sqlite3.Row) -> RunContext:
     return RunContext(
         external_run_id=str(row["external_run_id"]),
         internal_run_id=int(row["run_id"]),
+        job_id=int(row["job_id"]),
+        job_name=str(row["job_name"]),
+        status=str(row["status"]),
+        started_at=row["started_at"],
+        ended_at=row["ended_at"],
+        error_message=row["error_message"],
+    )
+
+
+def _row_to_run_record(row: sqlite3.Row) -> RunRecord:
+    return RunRecord(
+        internal_run_id=int(row["run_id"]),
+        external_run_id=row["external_run_id"],
         job_id=int(row["job_id"]),
         job_name=str(row["job_name"]),
         status=str(row["status"]),
