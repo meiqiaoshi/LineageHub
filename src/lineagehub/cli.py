@@ -19,6 +19,7 @@ from lineagehub.graph import (
     lineage_impact_results,
     lineage_upstream_results,
 )
+from lineagehub.analysis import summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
     downstream_payload,
@@ -113,6 +114,25 @@ def main(argv: list[str] | None = None) -> int:
     p_impact_run.add_argument("run_id", help="External run id (e.g. run_001)")
     p_impact_run.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
+    p_incidents = sub.add_parser("incidents", help="Operational incident summaries")
+    incidents_sub = p_incidents.add_subparsers(dest="incidents_command", required=True)
+
+    p_inc_summarize = incidents_sub.add_parser(
+        "summarize",
+        help="Summarize matching runs and their downstream blast radius",
+    )
+    p_inc_summarize.add_argument(
+        "--status",
+        default="failed",
+        help="Run status filter (default: failed)",
+    )
+    p_inc_summarize.add_argument(
+        "--since",
+        help="Only include runs with started_at >= SINCE (ISO-8601 string)",
+    )
+    p_inc_summarize.add_argument("--limit", type=int, help="Max number of runs to include")
+    p_inc_summarize.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
     args = parser.parse_args(argv)
     db_path = Path(args.db)
     store = MetadataStore(db_path)
@@ -188,6 +208,44 @@ def main(argv: list[str] | None = None) -> int:
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled runs command: {args.runs_command!r}")
+            case "incidents":
+                match args.incidents_command:
+                    case "summarize":
+                        result = summarize_failed_runs(
+                            store,
+                            status=args.status,
+                            since=args.since,
+                            limit=args.limit,
+                        )
+                        if args.json:
+                            sys.stdout.write(dumps_json(result))
+                            return 0
+
+                        status_label = args.status or "matching"
+                        print(f"Incident summary for {status_label} runs:\n")
+                        if result["incident_count"] == 0:
+                            print("(none)")
+                            return 0
+                        for i, inc in enumerate(result["incidents"], start=1):
+                            print(f"{i}. Run: {inc['run_id']}")
+                            print(f"   Job: {inc['job_name']}")
+                            print("   Output datasets:")
+                            for name in inc["output_datasets"]:
+                                print(f"   - {name}")
+                            print()
+                            print("   Affected downstream datasets:")
+                            aff = inc["affected_datasets"]
+                            if not aff:
+                                print("   (none)")
+                            else:
+                                for a in aff:
+                                    print(f"   - {a['name']} (distance: {a['distance']})")
+                            print()
+                        return 0
+                    case _:
+                        raise RuntimeError(
+                            f"unhandled incidents command: {args.incidents_command!r}"
+                        )
             case "upstream":
                 if args.json:
                     items = lineage_upstream_results(store, args.dataset, depth=args.depth)
