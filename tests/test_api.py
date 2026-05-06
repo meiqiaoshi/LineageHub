@@ -44,6 +44,13 @@ def api_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
                         "started_at": "2026-05-02T10:00:00Z",
                         "ended_at": "2026-05-02T10:05:00Z",
                     },
+                    {
+                        "run_id": "run_003",
+                        "job_name": "daily_sales_job",
+                        "status": "failed",
+                        "started_at": "2026-05-03T08:00:00Z",
+                        "ended_at": "2026-05-03T08:05:00Z",
+                    },
                 ]
             }
         ),
@@ -116,7 +123,7 @@ def test_api_jobs_latest_run(api_client) -> None:
     body = r.json()
     assert body["query_type"] == "latest_run"
     assert body["job_name"] == "daily_sales_job"
-    assert body["run"]["run_id"] == "run_002"
+    assert body["run"]["run_id"] == "run_003"
 
 
 def test_api_jobs_latest_unknown_job(api_client) -> None:
@@ -124,3 +131,37 @@ def test_api_jobs_latest_unknown_job(api_client) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["run"] is None
+
+
+def test_api_incidents_summary(api_client) -> None:
+    r = api_client.get("/incidents/summary")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "incident_summary"
+    assert body["incident_count"] == 2
+    assert {inc["run_id"] for inc in body["incidents"]} == {"run_001", "run_003"}
+
+
+def test_api_incidents_summary_limit(api_client) -> None:
+    r = api_client.get("/incidents/summary", params={"limit": 1})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["incident_count"] == 1
+    assert body["incidents"][0]["run_id"] == "run_003"
+
+
+def test_api_incidents_rank(api_client) -> None:
+    r = api_client.get("/incidents/rank")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "incident_ranking"
+    ids = [row["run_id"] for row in body["incidents"]]
+    assert ids == ["run_001", "run_003"]
+
+
+def test_api_incidents_rank_limit(api_client) -> None:
+    r = api_client.get("/incidents/rank", params={"limit": 1})
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["incidents"]) == 1
+    assert body["incidents"][0]["run_id"] == "run_001"

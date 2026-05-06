@@ -19,7 +19,7 @@ from lineagehub.graph import (
     lineage_impact_results,
     lineage_upstream_results,
 )
-from lineagehub.analysis import summarize_failed_runs
+from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
     downstream_payload,
@@ -259,36 +259,15 @@ def main(argv: list[str] | None = None) -> int:
                             print()
                         return 0
                     case "rank":
-                        result = summarize_failed_runs(
+                        payload = incident_ranking(
                             store,
                             status=args.status,
                             since=args.since,
-                            limit=None,
+                            limit_runs=None,
+                            limit_ranked=args.limit,
                         )
-                        ranked = sorted(
-                            result["incidents"],
-                            key=lambda i: (i["blast_radius_score"], i["run_id"]),
-                            reverse=True,
-                        )
-                        if args.limit is not None:
-                            ranked = ranked[: int(args.limit)]
-
+                        ranked = payload["incidents"]
                         if args.json:
-                            payload = {
-                                "query_type": "incident_ranking",
-                                "ranking_method": "affected_dataset_count",
-                                "incidents": [
-                                    {
-                                        "rank": idx,
-                                        "run_id": inc["run_id"],
-                                        "job_name": inc["job_name"],
-                                        "blast_radius_score": inc["blast_radius_score"],
-                                        "severity": inc["severity"],
-                                        "affected_count": inc["blast_radius_score"],
-                                    }
-                                    for idx, inc in enumerate(ranked, start=1)
-                                ],
-                            }
                             sys.stdout.write(dumps_json(payload))
                             return 0
 
@@ -297,11 +276,11 @@ def main(argv: list[str] | None = None) -> int:
                         if not ranked:
                             print("(none)")
                             return 0
-                        for idx, inc in enumerate(ranked, start=1):
-                            print(f"{idx}. {inc['run_id']} — {inc['job_name']}")
-                            print(f"   Severity: {inc['severity']}")
-                            print(f"   Blast radius score: {inc['blast_radius_score']}")
-                            print(f"   Affected datasets: {inc['blast_radius_score']}")
+                        for row in ranked:
+                            print(f"{row['rank']}. {row['run_id']} — {row['job_name']}")
+                            print(f"   Severity: {row['severity']}")
+                            print(f"   Blast radius score: {row['blast_radius_score']}")
+                            print(f"   Affected datasets: {row['affected_count']}")
                             print()
                         return 0
                     case _:

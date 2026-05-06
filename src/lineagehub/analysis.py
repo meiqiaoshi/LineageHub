@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from lineagehub.graph import analyze_run_impact
 from lineagehub.store import MetadataStore
 
@@ -65,4 +67,44 @@ def summarize_failed_runs(
         "incidents": incidents,
         "max_blast_radius_score": max_score,
         "highest_severity": _severity_from_blast_radius(max_score),
+    }
+
+
+def incident_ranking(
+    store: MetadataStore,
+    *,
+    status: str = "failed",
+    since: str | None = None,
+    limit_runs: int | None = None,
+    limit_ranked: int | None = None,
+) -> dict[str, Any]:
+    """
+    Rank incidents by ``blast_radius_score`` descending (stable tie-break: ``run_id`` descending).
+
+    ``limit_runs`` caps rows fed into summary (same as ``summarize_failed_runs(..., limit=...)``).
+    ``limit_ranked`` caps how many ranked rows appear after sorting (CLI/API ``--limit`` on rank).
+    """
+    summary = summarize_failed_runs(store, status=status, since=since, limit=limit_runs)
+    ranked_incidents = sorted(
+        summary["incidents"],
+        key=lambda i: (i["blast_radius_score"], i["run_id"]),
+        reverse=True,
+    )
+    if limit_ranked is not None:
+        ranked_incidents = ranked_incidents[: int(limit_ranked)]
+
+    return {
+        "query_type": "incident_ranking",
+        "ranking_method": "affected_dataset_count",
+        "incidents": [
+            {
+                "rank": idx,
+                "run_id": inc["run_id"],
+                "job_name": inc["job_name"],
+                "blast_radius_score": inc["blast_radius_score"],
+                "severity": inc["severity"],
+                "affected_count": inc["blast_radius_score"],
+            }
+            for idx, inc in enumerate(ranked_incidents, start=1)
+        ],
     }

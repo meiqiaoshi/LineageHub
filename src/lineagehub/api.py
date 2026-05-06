@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 
+from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.cli import default_db_path
 from lineagehub.graph import (
     analyze_run_impact,
@@ -85,6 +86,32 @@ def dataset_impact(name: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Unknown dataset: {name!r}")
     items = lineage_impact_results(store, name, depth="all")
     return impact_payload(name, items)
+
+
+@app.get("/incidents/summary")
+def incidents_summary(
+    status: str = Query("failed", description="Run status filter"),
+    since: str | None = Query(None, description="Only runs with started_at >= since"),
+    limit: int | None = Query(None, ge=1, description="Max runs evaluated"),
+) -> dict[str, Any]:
+    store = _store()
+    return summarize_failed_runs(store, status=status, since=since, limit=limit)
+
+
+@app.get("/incidents/rank")
+def incidents_rank(
+    status: str = Query("failed", description="Run status filter"),
+    since: str | None = Query(None, description="Only runs with started_at >= since"),
+    limit: int | None = Query(None, ge=1, description="Max ranked incidents returned"),
+) -> dict[str, Any]:
+    store = _store()
+    return incident_ranking(
+        store,
+        status=status,
+        since=since,
+        limit_runs=None,
+        limit_ranked=limit,
+    )
 
 
 @app.get("/runs")
