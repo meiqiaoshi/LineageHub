@@ -133,6 +133,22 @@ def main(argv: list[str] | None = None) -> int:
     p_inc_summarize.add_argument("--limit", type=int, help="Max number of runs to include")
     p_inc_summarize.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
+    p_inc_rank = incidents_sub.add_parser(
+        "rank",
+        help="Rank incidents by blast radius score",
+    )
+    p_inc_rank.add_argument(
+        "--status",
+        default="failed",
+        help="Run status filter (default: failed)",
+    )
+    p_inc_rank.add_argument(
+        "--since",
+        help="Only include runs with started_at >= SINCE (ISO-8601 string)",
+    )
+    p_inc_rank.add_argument("--limit", type=int, help="Max number of incidents to return")
+    p_inc_rank.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
     args = parser.parse_args(argv)
     db_path = Path(args.db)
     store = MetadataStore(db_path)
@@ -240,6 +256,52 @@ def main(argv: list[str] | None = None) -> int:
                             else:
                                 for a in aff:
                                     print(f"   - {a['name']} (distance: {a['distance']})")
+                            print()
+                        return 0
+                    case "rank":
+                        result = summarize_failed_runs(
+                            store,
+                            status=args.status,
+                            since=args.since,
+                            limit=None,
+                        )
+                        ranked = sorted(
+                            result["incidents"],
+                            key=lambda i: (i["blast_radius_score"], i["run_id"]),
+                            reverse=True,
+                        )
+                        if args.limit is not None:
+                            ranked = ranked[: int(args.limit)]
+
+                        if args.json:
+                            payload = {
+                                "query_type": "incident_ranking",
+                                "ranking_method": "affected_dataset_count",
+                                "incidents": [
+                                    {
+                                        "rank": idx,
+                                        "run_id": inc["run_id"],
+                                        "job_name": inc["job_name"],
+                                        "blast_radius_score": inc["blast_radius_score"],
+                                        "severity": inc["severity"],
+                                        "affected_count": inc["blast_radius_score"],
+                                    }
+                                    for idx, inc in enumerate(ranked, start=1)
+                                ],
+                            }
+                            sys.stdout.write(dumps_json(payload))
+                            return 0
+
+                        status_label = args.status or "matching"
+                        print(f"Ranked incidents by blast radius ({status_label} runs):\n")
+                        if not ranked:
+                            print("(none)")
+                            return 0
+                        for idx, inc in enumerate(ranked, start=1):
+                            print(f"{idx}. {inc['run_id']} — {inc['job_name']}")
+                            print(f"   Severity: {inc['severity']}")
+                            print(f"   Blast radius score: {inc['blast_radius_score']}")
+                            print(f"   Affected datasets: {inc['blast_radius_score']}")
                             print()
                         return 0
                     case _:
