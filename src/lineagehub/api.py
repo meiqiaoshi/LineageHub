@@ -19,7 +19,7 @@ from lineagehub.output import (
     run_impact_payload,
     upstream_payload,
 )
-from lineagehub.store import MetadataStore
+from lineagehub.store import MetadataStore, RunRecord
 
 DepthQuery = Literal["direct", "all"]
 
@@ -28,6 +28,17 @@ app = FastAPI(title="LineageHub", version="0.2.0")
 
 def _store() -> MetadataStore:
     return MetadataStore(default_db_path())
+
+
+def _run_record_public_dict(r: RunRecord) -> dict[str, Any]:
+    rid = r.external_run_id if r.external_run_id is not None else str(r.internal_run_id)
+    return {
+        "run_id": rid,
+        "job_name": r.job_name,
+        "status": r.status,
+        "started_at": r.started_at,
+        "ended_at": r.ended_at,
+    }
 
 
 @app.get("/health")
@@ -74,6 +85,38 @@ def dataset_impact(name: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Unknown dataset: {name!r}")
     items = lineage_impact_results(store, name, depth="all")
     return impact_payload(name, items)
+
+
+@app.get("/runs")
+def list_runs(
+    status: str | None = Query(None, description="Filter by run status"),
+    job: str | None = Query(None, description="Filter by job name"),
+    since: str | None = Query(None, description="Only runs with started_at >= since (ISO-8601)"),
+    limit: int | None = Query(None, ge=1, description="Max number of rows"),
+) -> dict[str, Any]:
+    store = _store()
+    rows = store.list_runs(status=status, job_name=job, since=since, limit=limit)
+    return {
+        "query_type": "runs_list",
+        "filters": {
+            "status": status,
+            "job": job,
+            "since": since,
+            "limit": limit,
+        },
+        "runs": [_run_record_public_dict(r) for r in rows],
+    }
+
+
+@app.get("/jobs/{job_name}/runs/latest")
+def latest_run_for_job(job_name: str) -> dict[str, Any]:
+    store = _store()
+    latest = store.get_latest_run(job_name)
+    return {
+        "query_type": "latest_run",
+        "job_name": job_name,
+        "run": _run_record_public_dict(latest) if latest is not None else None,
+    }
 
 
 @app.get("/runs/{run_id}/impact")

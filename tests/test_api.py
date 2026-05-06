@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_LINEAGE_JSON = REPO_ROOT / "examples" / "sample_lineage.json"
-SAMPLE_RUNS_JSON = REPO_ROOT / "examples" / "sample_runs.json"
 
 
 @pytest.fixture()
@@ -24,7 +24,32 @@ def api_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     monkeypatch.setenv("LINEAGEHUB_DB", str(db))
     store = MetadataStore(db)
     load_lineage_json(store, SAMPLE_LINEAGE_JSON)
-    load_runs_json(store, SAMPLE_RUNS_JSON)
+    runs_path = tmp_path / "runs.json"
+    runs_path.write_text(
+        json.dumps(
+            {
+                "runs": [
+                    {
+                        "run_id": "run_001",
+                        "job_name": "clean_orders_job",
+                        "status": "failed",
+                        "started_at": "2026-05-01T09:00:00Z",
+                        "ended_at": "2026-05-01T09:03:00Z",
+                        "error_message": "Source dataset raw_orders was stale",
+                    },
+                    {
+                        "run_id": "run_002",
+                        "job_name": "daily_sales_job",
+                        "status": "success",
+                        "started_at": "2026-05-02T10:00:00Z",
+                        "ended_at": "2026-05-02T10:05:00Z",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    load_runs_json(store, runs_path)
     return TestClient(app)
 
 
@@ -67,3 +92,35 @@ def test_run_impact(api_client) -> None:
     assert body["query_type"] == "run_impact"
     assert body["job"] == "clean_orders_job"
     assert body["affected_count"] == 2
+
+
+def test_api_list_runs(api_client) -> None:
+    r = api_client.get("/runs")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "runs_list"
+    assert [row["run_id"] for row in body["runs"]] == ["run_002", "run_001"]
+
+
+def test_api_list_runs_status_failed(api_client) -> None:
+    r = api_client.get("/runs", params={"status": "failed"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["filters"]["status"] == "failed"
+    assert [row["run_id"] for row in body["runs"]] == ["run_001"]
+
+
+def test_api_jobs_latest_run(api_client) -> None:
+    r = api_client.get("/jobs/daily_sales_job/runs/latest")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "latest_run"
+    assert body["job_name"] == "daily_sales_job"
+    assert body["run"]["run_id"] == "run_002"
+
+
+def test_api_jobs_latest_unknown_job(api_client) -> None:
+    r = api_client.get("/jobs/nonexistent_job_xyz/runs/latest")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["run"] is None
