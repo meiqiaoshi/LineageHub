@@ -394,6 +394,46 @@ lineagehub impact-run run_001
 lineagehub impact-run run_001 --json
 ```
 
+### Operational incident analysis
+
+Phase 3 adds operational queries so investigations do not need to start from a known `run_id`.
+
+List runs (filter and inspect recent failures):
+
+```bash
+lineagehub runs list
+lineagehub runs list --status failed --json
+lineagehub runs list --job clean_orders_job --limit 5
+```
+
+Latest run for a job:
+
+```bash
+lineagehub runs latest --job clean_orders_job
+lineagehub runs latest --job clean_orders_job --json
+```
+
+Summarize failed runs and their downstream impact:
+
+```bash
+lineagehub incidents summarize
+lineagehub incidents summarize --limit 10 --json
+```
+
+Rank incidents by blast radius (downstream affected dataset count):
+
+```bash
+lineagehub incidents rank
+lineagehub incidents rank --limit 10 --json
+```
+
+**Blast radius score** is the number of downstream datasets affected. **Severity** buckets are intentionally simple and explainable:
+
+- `0` → `none`
+- `1–2` → `low`
+- `3–5` → `medium`
+- `6+` → `high`
+
 For **upstream** and **downstream**, control whether to show only **immediate** neighbors or the **full transitive** closure:
 
 - `--depth direct` — one hop (direct dependencies or dependents).
