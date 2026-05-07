@@ -135,6 +135,35 @@ CLI text or JSON — or HTTP GET via optional API
 
 ---
 
+## Incident analysis flow (Phase 3)
+
+Phase 3 adds operational queries that start from *recent runs* instead of a known `run_id`.
+
+```text
+runs table
+    ↓
+list failed runs (store.list_runs)
+    ↓
+for each run: resolve job outputs (lineage_edges where job_id)
+    ↓
+downstream traversal from outputs (graph.analyze_run_impact)
+    ↓
+incident summary + blast radius scoring (analysis.py)
+    ↓
+CLI: incidents summarize / incidents rank
+API: GET /incidents/summary / GET /incidents/rank
+```
+
+Layering is kept explicit and reusable:
+
+```text
+store.py  → runs listing + latest-run lookup
+graph.py  → lineage traversal + run-aware impact
+analysis.py → incident aggregation + scoring + ranking
+cli.py    → presentation (text) + JSON flags
+api.py    → read-only HTTP endpoints
+```
+
 ## Future Extensions
 
 Potential future extensions include:
