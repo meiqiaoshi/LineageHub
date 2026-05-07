@@ -7,6 +7,36 @@
       "started_at": "2026-05-01T09:00:00Z",
       "ended_at": "2026-05-01T09:03:00Z",
       "error_message": "Source dataset raw_orders was stale"
+    },
+    {
+      "run_id": "run_002",
+      "job_name": "daily_sales_job",
+      "status": "success",
+      "started_at": "2026-05-01T10:00:00Z",
+      "ended_at": "2026-05-01T10:05:00Z"
+    },
+    {
+      "run_id": "run_003",
+      "job_name": "daily_sales_job",
+      "status": "failed",
+      "started_at": "2026-05-02T10:00:00Z",
+      "ended_at": "2026-05-02T10:04:00Z",
+      "error_message": "Warehouse connection timeout"
+    },
+    {
+      "run_id": "run_004",
+      "job_name": "clean_orders_job",
+      "status": "success",
+      "started_at": "2026-05-03T09:00:00Z",
+      "ended_at": "2026-05-03T09:02:00Z"
+    },
+    {
+      "run_id": "run_005",
+      "job_name": "sales_dashboard_refresh",
+      "status": "failed",
+      "started_at": "2026-05-03T12:00:00Z",
+      "ended_at": "2026-05-03T12:01:00Z",
+      "error_message": "Dashboard API rate limit"
     }
   ]
 }
