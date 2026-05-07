@@ -27,7 +27,10 @@ LineageHub holds **dataset–job–run** metadata and answers graph questions (u
 
 **Direction:** Orion ↔ LineageHub HTTP API.
 
-- Orion translates user questions into calls to read-only endpoints (`/datasets/.../upstream`, `/downstream`, `/impact`, `/runs/.../impact`).
+- Orion translates user questions into calls to read-only endpoints:
+  - lineage queries: `/datasets/.../upstream`, `/downstream`, `/impact`
+  - run queries: `/runs`, `/jobs/{job_name}/runs/latest`, `/runs/{run_id}/impact`
+  - incident triage: `/incidents/summary`, `/incidents/rank`
 - Responses stay structured JSON so Orion can summarize without re-implementing graph logic.
 
 ## Contract assumptions

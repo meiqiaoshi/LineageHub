@@ -51,11 +51,28 @@ Example questions:
 
 ---
 
-## Phase 3 — Integration Layer
+## Phase 3 — Operational Incident Analysis
+
+Goal: Turn LineageHub into a local-first incident triage tool on top of stored lineage + runs.
+
+Delivered in code:
+
+- Run listing and filtering (`runs list`) and latest-run lookup by job (`runs latest`)
+- Incident summaries over failed runs (`incidents summarize`) with downstream impact expansion
+- Blast radius scoring and severity bucketing, plus ranking (`incidents rank`)
+- Optional API endpoints for operational queries:
+  - `GET /runs`
+  - `GET /jobs/{job_name}/runs/latest`
+  - `GET /incidents/summary`
+  - `GET /incidents/rank`
+
+Future phases can add cross-system connectors; see [integration_plan.md](integration_plan.md).
+
+---
+
+## Phase 4 — Integration Layer
 
 Goal: Make LineageHub connect with other data platform tools.
-
-Sketch-level alignment with named systems is in [integration_plan.md](integration_plan.md).
 
 Planned work:
 
@@ -73,11 +90,11 @@ Example questions:
 
 ---
 
-## Phase 4 — API and Visualization
+## Phase 5 — API and Visualization
 
 Goal: Expose lineage metadata through service endpoints and basic visualization.
 
-**Shipped (minimal):** read-only FastAPI app with JSON payloads aligned to the CLI (`GET /datasets/{name}/upstream`, `/downstream`, `/impact`, `/runs/{run_id}/impact`, `/health`, `/datasets`).
+**Shipped (minimal):** read-only FastAPI app with JSON payloads aligned to the CLI, including dataset lineage endpoints, run queries, and incident analysis.
 
 Remaining planned work:
 
@@ -87,7 +104,7 @@ Remaining planned work:
 
 ---
 
-## Phase 5 — Natural Language Metadata Queries
+## Phase 6 — Natural Language Metadata Queries
 
 Goal: Allow users to ask lineage and impact questions in plain English.
 

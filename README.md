@@ -370,7 +370,7 @@ pip install -e ".[api]"
 LINEAGEHUB_DB=./lineagehub.db uvicorn lineagehub.api:app --reload
 ```
 
-Example endpoints (response JSON matches CLI `--json` payloads): `GET /health`, `GET /datasets`, `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /runs/{run_id}/impact`.
+Example endpoints (response JSON matches CLI `--json` payloads): `GET /health`, `GET /datasets`, `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /runs`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`, `GET /incidents/summary`, `GET /incidents/rank`.
 
 Load the sample lineage file into the default SQLite database (`./lineagehub.db`, unless overridden):
 
