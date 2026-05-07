@@ -1,6 +1,6 @@
 # LineageHub Roadmap
 
-This file tracks the original phased plan. Several Phase 2 and Phase 4 items now exist in code (CLI depth/JSON, graph export, runs loader, `impact-run`, optional FastAPI); see the README **Current Status** for what is implemented today.
+This file tracks the original phased plan, aligned with what exists in the repository today. See the README **Current Status** for a concise summary.
 
 ## Phase 1 — Local Lineage MVP
 
@@ -33,7 +33,7 @@ Goal: Connect lineage relationships with pipeline execution status.
 
 **Delivered in code:** run records with status and `external_run_id` from `load-runs`, `impact-run` (downstream from a run’s job outputs), plus supporting CLI flags and optional API `GET /runs/{run_id}/impact`.
 
-**Not delivered yet:** a “recent failures” or job listing command (roll-up of latest failed runs across jobs).
+Operational run discovery (`runs list`, `runs latest`, and matching API routes) lives in **Phase 3** below.
 
 Original planned work:
 

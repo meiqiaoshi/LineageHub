@@ -80,6 +80,10 @@ lineagehub downstream raw_orders
 lineagehub impact raw_orders
 lineagehub impact-run run_001
 lineagehub graph mart_daily_sales
+lineagehub runs list --status failed
+lineagehub runs latest --job clean_orders_job
+lineagehub incidents summarize --json
+lineagehub incidents rank --json
 ```
 
 ### 5. Optional API layer
@@ -94,7 +98,11 @@ GET /datasets
 GET /datasets/{name}/upstream
 GET /datasets/{name}/downstream
 GET /datasets/{name}/impact
+GET /runs
+GET /jobs/{job_name}/runs/latest
 GET /runs/{run_id}/impact
+GET /incidents/summary
+GET /incidents/rank
 ```
 
 ---

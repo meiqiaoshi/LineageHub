@@ -218,7 +218,9 @@ This means `clean_orders` depends on `raw_orders`.
 
 **Phase 1** established a local workflow: metadata models, SQLite, JSON lineage loading, upstream/downstream/impact queries, and pytest coverage.
 
-**Phase 2** added pipeline runs (`load-runs`), run-aware downstream impact (`impact-run`), CLI **`--depth`** / **`--json`**, **`graph`** export, and an optional read-only HTTP API. The authoritative list of what exists today is under **Current Status** near the end of this README.
+**Phase 2** added pipeline runs (`load-runs`), run-aware downstream impact (`impact-run`), CLI **`--depth`** / **`--json`**, **`graph`** export, and an optional read-only HTTP API.
+
+**Phase 3** added operational incident triage: **`runs list`**, **`runs latest`**, **`incidents summarize`** / **`incidents rank`** (with blast-radius scoring), plus matching read-only API routes. The authoritative list of what exists today is under **Current Status** near the end of this README.
 
 ### Still out of scope
 
@@ -306,6 +308,7 @@ LineageHub/
 │       ├── loader.py
 │       ├── graph.py
 │       ├── output.py
+│       ├── analysis.py
 │       └── api.py
 └── tests/
     ├── conftest.py
@@ -316,6 +319,11 @@ LineageHub/
     ├── test_formatters.py
     ├── test_runs_loader.py
     ├── test_impact_run.py
+    ├── test_store_runs_list.py
+    ├── test_cli_runs_list.py
+    ├── test_analysis_summarize.py
+    ├── test_cli_incidents_summarize.py
+    ├── test_cli_incidents_rank.py
     └── test_api.py
 ```
 
@@ -338,14 +346,20 @@ LineageHub/
 - Graph export for diagrams (**text / Mermaid / DOT**)
 - Optional **read-only FastAPI** (`pip install -e ".[api]"`)
 
-### Phase 3 — Integration Layer
+### Phase 3 — Operational incident analysis
+
+- **`runs list`** / **`runs latest`** for recent and per-job run discovery
+- **`incidents summarize`** and **`incidents rank`** with blast-radius scoring
+- Read-only API: **`GET /runs`**, **`GET /jobs/{job}/runs/latest`**, **`GET /incidents/summary`**, **`GET /incidents/rank`**
+
+### Phase 4 — Integration layer
 
 - Import metadata from existing ingestion pipelines
 - Connect with data quality alerts
 - Link pipeline failures with affected datasets
-- Support richer metadata from external systems
+- Support richer metadata from external systems (see [integration plan](docs/integration_plan.md))
 
-### Phase 4 — Visualization and assistant UX
+### Phase 5 — Visualization and assistant UX
 
 - Authenticated or multi-tenant API deployment (today’s API is local read-only)
 - Simple graph visualization in the browser
@@ -476,6 +490,17 @@ Run tests from the repository root. API tests require FastAPI (install **`[api]`
 pytest
 ```
 
+**Requires Python 3.10+:** the CLI uses `match` / `case` (PEP 634); older interpreters will fail at import time.
+
+**Phase 3 sanity check** (after loading sample data into the default DB, or use `--db`):
+
+```bash
+lineagehub load examples/sample_lineage.json
+lineagehub load-runs examples/sample_runs.json
+lineagehub runs list --status failed --json
+lineagehub incidents rank --json
+```
+
 Without installing the package globally, point Python at `src/` and invoke the CLI as a module:
 
 ```bash
@@ -518,9 +543,9 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), graph traversal with **`--depth`** / **`--json`**, **`graph`** export (text / Mermaid / DOT), **`impact-run`**, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), graph traversal with **`--depth`** / **`--json`**, **`graph`** export (text / Mermaid / DOT), **`impact-run`**, operational **`runs`** / **`incidents`** CLI and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
 
-**Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators (see roadmap).
+**Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
 
 ---
 
