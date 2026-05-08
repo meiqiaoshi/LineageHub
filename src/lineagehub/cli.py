@@ -54,6 +54,12 @@ def main(argv: list[str] | None = None) -> int:
     p_load_runs = sub.add_parser("load-runs", help="Load pipeline run records from a JSON file")
     p_load_runs.add_argument("path", type=Path, help="Path to runs JSON")
 
+    p_datasets = sub.add_parser("datasets", help="Dataset catalog")
+    datasets_sub = p_datasets.add_subparsers(dest="datasets_command", required=True)
+
+    p_datasets_list = datasets_sub.add_parser("list", help="List all datasets")
+    p_datasets_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
     p_runs = sub.add_parser("runs", help="Operational queries over pipeline runs")
     runs_sub = p_runs.add_subparsers(dest="runs_command", required=True)
 
@@ -163,6 +169,40 @@ def main(argv: list[str] | None = None) -> int:
                 load_runs_json(store, args.path)
                 print(f"Loaded runs from {args.path} into {db_path.resolve()}")
                 return 0
+            case "datasets":
+                match args.datasets_command:
+                    case "list":
+                        rows = store.list_dataset_records()
+                        if args.json:
+                            payload = {
+                                "query_type": "datasets_list",
+                                "count": len(rows),
+                                "datasets": [
+                                    {
+                                        "name": r.name,
+                                        "type": r.dataset_type,
+                                        "uri": r.uri,
+                                    }
+                                    for r in rows
+                                ],
+                            }
+                            sys.stdout.write(dumps_json(payload))
+                            return 0
+
+                        print("Datasets:\n")
+                        if not rows:
+                            print("(none)")
+                            return 0
+                        for r in rows:
+                            print(f"- {r.name}")
+                            t = r.dataset_type if r.dataset_type is not None else "(none)"
+                            u = r.uri if r.uri is not None else "(none)"
+                            print(f"  Type: {t}")
+                            print(f"  URI: {u}")
+                            print()
+                        return 0
+                    case _:
+                        raise RuntimeError(f"unhandled datasets command: {args.datasets_command!r}")
             case "runs":
                 match args.runs_command:
                     case "list":
