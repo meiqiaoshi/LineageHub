@@ -88,6 +88,16 @@ class RunRecord:
     error_message: str | None
 
 
+@dataclass(frozen=True)
+class DatasetRecord:
+    """Subset of dataset fields for catalog listings (Phase 4)."""
+
+    dataset_id: int
+    name: str
+    dataset_type: str | None
+    uri: str | None
+
+
 def _apply_runs_migrations(conn: sqlite3.Connection) -> None:
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
     if "external_run_id" not in cols:
@@ -386,6 +396,25 @@ class MetadataStore:
         try:
             rows = conn.execute("SELECT * FROM datasets ORDER BY name").fetchall()
             return [_row_to_dataset(r) for r in rows]
+        finally:
+            conn.close()
+
+    def list_dataset_records(self) -> list[DatasetRecord]:
+        """Catalog-oriented listing: id, name, type, uri; ordered by name."""
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                "SELECT dataset_id, name, type, uri FROM datasets ORDER BY name"
+            ).fetchall()
+            return [
+                DatasetRecord(
+                    dataset_id=int(r["dataset_id"]),
+                    name=str(r["name"]),
+                    dataset_type=r["type"],
+                    uri=r["uri"],
+                )
+                for r in rows
+            ]
         finally:
             conn.close()
 

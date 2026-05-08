@@ -40,6 +40,25 @@ def test_list_datasets_sorted_by_name(empty_store: MetadataStore) -> None:
     assert names == ["alpha", "zebra"]
 
 
+def test_list_dataset_records_empty(empty_store: MetadataStore) -> None:
+    assert empty_store.list_dataset_records() == []
+
+
+def test_list_dataset_records_sorted_with_type_and_uri(empty_store: MetadataStore) -> None:
+    empty_store.upsert_dataset(
+        Dataset(name="zebra", dataset_type="table", uri="duckdb://warehouse/zebra")
+    )
+    empty_store.upsert_dataset(Dataset(name="alpha", dataset_type="file", uri="s3://bucket/a"))
+    rows = empty_store.list_dataset_records()
+    assert [type(r).__name__ for r in rows] == ["DatasetRecord", "DatasetRecord"]
+    assert [(r.name, r.dataset_type, r.uri) for r in rows] == [
+        ("alpha", "file", "s3://bucket/a"),
+        ("zebra", "table", "duckdb://warehouse/zebra"),
+    ]
+    assert rows[0].dataset_id >= 1
+    assert rows[1].dataset_id >= 1
+
+
 def test_insert_run_foreign_key(empty_store: MetadataStore) -> None:
     jid = empty_store.upsert_job(Job(name="j"))
     rid = empty_store.insert_run(Run(job_id=jid, status="success"))
