@@ -43,6 +43,26 @@ def impact_payload(dataset: str, items: list[LineageResult]) -> dict[str, Any]:
     }
 
 
+def dataset_show_payload(
+    *,
+    name: str,
+    dataset_type: str | None,
+    uri: str | None,
+    producer_jobs: list[str],
+    consumer_jobs: list[str],
+    upstream: list[LineageResult],
+    downstream: list[LineageResult],
+) -> dict[str, Any]:
+    return {
+        "query_type": "dataset_show",
+        "dataset": {"name": name, "type": dataset_type, "uri": uri},
+        "producer_jobs": producer_jobs,
+        "consumer_jobs": consumer_jobs,
+        "upstream": [{"name": x.name, "distance": x.distance} for x in upstream],
+        "downstream": [{"name": x.name, "distance": x.distance} for x in downstream],
+    }
+
+
 def run_impact_payload(analysis: RunImpactAnalysis) -> dict[str, Any]:
     return {
         "query_type": "run_impact",

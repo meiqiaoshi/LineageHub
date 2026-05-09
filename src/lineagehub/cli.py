@@ -22,6 +22,7 @@ from lineagehub.graph import (
 from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
+    dataset_show_payload,
     downstream_payload,
     dumps_json,
     format_edges_dot,
@@ -59,6 +60,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_datasets_list = datasets_sub.add_parser("list", help="List all datasets")
     p_datasets_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    p_datasets_show = datasets_sub.add_parser("show", help="Show one dataset and its lineage relationships")
+    p_datasets_show.add_argument("dataset", help="Dataset name")
+    p_datasets_show.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_jobs = sub.add_parser("jobs", help="Job catalog")
     jobs_sub = p_jobs.add_subparsers(dest="jobs_command", required=True)
@@ -206,6 +211,39 @@ def main(argv: list[str] | None = None) -> int:
                             print(f"  Type: {t}")
                             print(f"  URI: {u}")
                             print()
+                        return 0
+                    case "show":
+                        ds = store.get_dataset_by_name(args.dataset)
+                        if ds is None or ds.dataset_id is None:
+                            raise ValueError(f"Unknown dataset: {args.dataset!r}")
+                        upstream_items = lineage_upstream_results(store, args.dataset, depth="all")
+                        downstream_items = lineage_downstream_results(store, args.dataset, depth="all")
+                        producers = store.list_job_names_producing_dataset(ds.dataset_id)
+                        consumers = store.list_job_names_consuming_dataset(ds.dataset_id)
+                        if args.json:
+                            sys.stdout.write(
+                                dumps_json(
+                                    dataset_show_payload(
+                                        name=args.dataset,
+                                        dataset_type=ds.dataset_type,
+                                        uri=ds.uri,
+                                        producer_jobs=producers,
+                                        consumer_jobs=consumers,
+                                        upstream=upstream_items,
+                                        downstream=downstream_items,
+                                    )
+                                )
+                            )
+                            return 0
+                        _print_dataset_show(
+                            name=args.dataset,
+                            dataset_type=ds.dataset_type,
+                            uri=ds.uri,
+                            producer_jobs=producers,
+                            consumer_jobs=consumers,
+                            upstream_names=[x.name for x in upstream_items],
+                            downstream_names=[x.name for x in downstream_items],
+                        )
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled datasets command: {args.datasets_command!r}")
@@ -459,6 +497,43 @@ def _run_record_payload(r: RunRecord) -> dict:
         "started_at": r.started_at,
         "ended_at": r.ended_at,
     }
+
+
+def _bullets_or_none(names: list[str]) -> None:
+    if not names:
+        print("- None")
+        return
+    for n in names:
+        print(f"- {n}")
+
+
+def _print_dataset_show(
+    *,
+    name: str,
+    dataset_type: str | None,
+    uri: str | None,
+    producer_jobs: list[str],
+    consumer_jobs: list[str],
+    upstream_names: list[str],
+    downstream_names: list[str],
+) -> None:
+    t = dataset_type if dataset_type is not None else "(none)"
+    u = uri if uri is not None else "(none)"
+    print(f"Dataset: {name}")
+    print(f"Type: {t}")
+    print(f"URI: {u}")
+    print()
+    print("Produced by:")
+    _bullets_or_none(producer_jobs)
+    print()
+    print("Consumed by:")
+    _bullets_or_none(consumer_jobs)
+    print()
+    print("Upstream datasets:")
+    _bullets_or_none(upstream_names)
+    print()
+    print("Downstream datasets:")
+    _bullets_or_none(downstream_names)
 
 
 if __name__ == "__main__":

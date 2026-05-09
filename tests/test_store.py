@@ -73,6 +73,19 @@ def test_list_jobs_sorted_by_name(empty_store: MetadataStore) -> None:
     assert rows[1].job_id >= 1
 
 
+def test_job_names_producing_and_consuming_dataset(empty_store: MetadataStore) -> None:
+    up = empty_store.upsert_dataset(Dataset(name="upstream_ds"))
+    down = empty_store.upsert_dataset(Dataset(name="downstream_ds"))
+    jid = empty_store.upsert_job(Job(name="middle_job"))
+    empty_store.insert_lineage_edge(
+        LineageEdge(upstream_dataset_id=up, downstream_dataset_id=down, job_id=jid)
+    )
+    assert empty_store.list_job_names_producing_dataset(down) == ["middle_job"]
+    assert empty_store.list_job_names_consuming_dataset(up) == ["middle_job"]
+    assert empty_store.list_job_names_producing_dataset(up) == []
+    assert empty_store.list_job_names_consuming_dataset(down) == []
+
+
 def test_insert_run_foreign_key(empty_store: MetadataStore) -> None:
     jid = empty_store.upsert_job(Job(name="j"))
     rid = empty_store.insert_run(Run(job_id=jid, status="success"))

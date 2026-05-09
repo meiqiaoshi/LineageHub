@@ -445,6 +445,38 @@ class MetadataStore:
         finally:
             conn.close()
 
+    def list_job_names_producing_dataset(self, dataset_id: int) -> list[str]:
+        """Jobs that output this dataset (edges ending at ``dataset_id``)."""
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                """SELECT DISTINCT jobs.name FROM lineage_edges
+                   INNER JOIN jobs ON lineage_edges.job_id = jobs.job_id
+                   WHERE lineage_edges.downstream_dataset_id = ?
+                     AND lineage_edges.job_id IS NOT NULL
+                   ORDER BY jobs.name""",
+                (dataset_id,),
+            ).fetchall()
+            return [str(r["name"]) for r in rows]
+        finally:
+            conn.close()
+
+    def list_job_names_consuming_dataset(self, dataset_id: int) -> list[str]:
+        """Jobs that read this dataset as an input (edges starting from ``dataset_id``)."""
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                """SELECT DISTINCT jobs.name FROM lineage_edges
+                   INNER JOIN jobs ON lineage_edges.job_id = jobs.job_id
+                   WHERE lineage_edges.upstream_dataset_id = ?
+                     AND lineage_edges.job_id IS NOT NULL
+                   ORDER BY jobs.name""",
+                (dataset_id,),
+            ).fetchall()
+            return [str(r["name"]) for r in rows]
+        finally:
+            conn.close()
+
     def list_lineage_edges(self) -> list[LineageEdge]:
         conn = self.connect()
         try:
