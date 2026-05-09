@@ -60,6 +60,12 @@ def main(argv: list[str] | None = None) -> int:
     p_datasets_list = datasets_sub.add_parser("list", help="List all datasets")
     p_datasets_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
+    p_jobs = sub.add_parser("jobs", help="Job catalog")
+    jobs_sub = p_jobs.add_subparsers(dest="jobs_command", required=True)
+
+    p_jobs_list = jobs_sub.add_parser("list", help="List all jobs")
+    p_jobs_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
     p_runs = sub.add_parser("runs", help="Operational queries over pipeline runs")
     runs_sub = p_runs.add_subparsers(dest="runs_command", required=True)
 
@@ -203,6 +209,34 @@ def main(argv: list[str] | None = None) -> int:
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled datasets command: {args.datasets_command!r}")
+            case "jobs":
+                match args.jobs_command:
+                    case "list":
+                        rows = store.list_jobs()
+                        if args.json:
+                            payload = {
+                                "query_type": "jobs_list",
+                                "count": len(rows),
+                                "jobs": [
+                                    {"name": r.name, "description": r.description}
+                                    for r in rows
+                                ],
+                            }
+                            sys.stdout.write(dumps_json(payload))
+                            return 0
+
+                        print("Jobs:\n")
+                        if not rows:
+                            print("(none)")
+                            return 0
+                        for r in rows:
+                            print(f"- {r.name}")
+                            d = r.description if r.description is not None else "(none)"
+                            print(f"  Description: {d}")
+                            print()
+                        return 0
+                    case _:
+                        raise RuntimeError(f"unhandled jobs command: {args.jobs_command!r}")
             case "runs":
                 match args.runs_command:
                     case "list":

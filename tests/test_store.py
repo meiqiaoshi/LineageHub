@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from lineagehub.models import Dataset, Job, LineageEdge, Run
-from lineagehub.store import MetadataStore
+from lineagehub.store import JobRecord, MetadataStore
 
 
 def test_init_schema_creates_tables(empty_store: MetadataStore) -> None:
@@ -57,6 +57,20 @@ def test_list_dataset_records_sorted_with_type_and_uri(empty_store: MetadataStor
     ]
     assert rows[0].dataset_id >= 1
     assert rows[1].dataset_id >= 1
+
+
+def test_list_jobs_empty(empty_store: MetadataStore) -> None:
+    assert empty_store.list_jobs() == []
+
+
+def test_list_jobs_sorted_by_name(empty_store: MetadataStore) -> None:
+    empty_store.upsert_job(Job(name="zebra_job", description="last"))
+    empty_store.upsert_job(Job(name="alpha_job", description="first"))
+    rows = empty_store.list_jobs()
+    assert [r.name for r in rows] == ["alpha_job", "zebra_job"]
+    assert isinstance(rows[0], JobRecord)
+    assert rows[0].description == "first"
+    assert rows[1].job_id >= 1
 
 
 def test_insert_run_foreign_key(empty_store: MetadataStore) -> None:

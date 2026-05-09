@@ -98,6 +98,15 @@ class DatasetRecord:
     uri: str | None
 
 
+@dataclass(frozen=True)
+class JobRecord:
+    """Subset of job fields for catalog listings (Phase 4)."""
+
+    job_id: int
+    name: str
+    description: str | None
+
+
 def _apply_runs_migrations(conn: sqlite3.Connection) -> None:
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
     if "external_run_id" not in cols:
@@ -412,6 +421,24 @@ class MetadataStore:
                     name=str(r["name"]),
                     dataset_type=r["type"],
                     uri=r["uri"],
+                )
+                for r in rows
+            ]
+        finally:
+            conn.close()
+
+    def list_jobs(self) -> list[JobRecord]:
+        """Catalog-oriented job listing; ordered by name."""
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                "SELECT job_id, name, description FROM jobs ORDER BY name"
+            ).fetchall()
+            return [
+                JobRecord(
+                    job_id=int(r["job_id"]),
+                    name=str(r["name"]),
+                    description=r["description"],
                 )
                 for r in rows
             ]
