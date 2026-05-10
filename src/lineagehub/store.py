@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,10 @@ CREATE TABLE IF NOT EXISTS datasets (
     type TEXT,
     uri TEXT,
     description TEXT,
+    owner TEXT,
+    tags_json TEXT,
+    criticality TEXT,
+    catalog_system TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -117,6 +122,19 @@ def _apply_runs_migrations(conn: sqlite3.Connection) -> None:
     )
 
 
+def _apply_dataset_catalog_migrations(conn: sqlite3.Connection) -> None:
+    """Add optional catalog columns if missing; ``tags_json`` stores a JSON array of strings."""
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(datasets)").fetchall()}
+    if "owner" not in cols:
+        conn.execute("ALTER TABLE datasets ADD COLUMN owner TEXT")
+    if "tags_json" not in cols:
+        conn.execute("ALTER TABLE datasets ADD COLUMN tags_json TEXT")
+    if "criticality" not in cols:
+        conn.execute("ALTER TABLE datasets ADD COLUMN criticality TEXT")
+    if "catalog_system" not in cols:
+        conn.execute("ALTER TABLE datasets ADD COLUMN catalog_system TEXT")
+
+
 class MetadataStore:
     """Local SQLite metadata store."""
 
@@ -134,6 +152,7 @@ class MetadataStore:
         try:
             conn.executescript(SCHEMA_SQL)
             _apply_runs_migrations(conn)
+            _apply_dataset_catalog_migrations(conn)
             conn.commit()
         finally:
             conn.close()
@@ -143,6 +162,8 @@ class MetadataStore:
         now = utc_now_iso()
         conn = self.connect()
         try:
+            _apply_dataset_catalog_migrations(conn)
+            tags_blob = None if dataset.tags is None else json.dumps(list(dataset.tags))
             row = conn.execute(
                 "SELECT dataset_id, created_at FROM datasets WHERE name = ?",
                 (dataset.name,),
@@ -150,22 +171,38 @@ class MetadataStore:
             if row:
                 dataset_id = int(row["dataset_id"])
                 conn.execute(
-                    """UPDATE datasets SET type = ?, uri = ?, description = ?, updated_at = ?
+                    """UPDATE datasets SET type = ?, uri = ?, description = ?, owner = ?,
+                           tags_json = ?, criticality = ?, catalog_system = ?, updated_at = ?
                        WHERE dataset_id = ?""",
-                    (dataset.dataset_type, dataset.uri, dataset.description, now, dataset_id),
+                    (
+                        dataset.dataset_type,
+                        dataset.uri,
+                        dataset.description,
+                        dataset.owner,
+                        tags_blob,
+                        dataset.criticality,
+                        dataset.system,
+                        now,
+                        dataset_id,
+                    ),
                 )
                 conn.commit()
                 return dataset_id
             created = dataset.created_at or now
             updated = dataset.updated_at or now
             cur = conn.execute(
-                """INSERT INTO datasets (name, type, uri, description, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO datasets (name, type, uri, description, owner, tags_json,
+                       criticality, catalog_system, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     dataset.name,
                     dataset.dataset_type,
                     dataset.uri,
                     dataset.description,
+                    dataset.owner,
+                    tags_blob,
+                    dataset.criticality,
+                    dataset.system,
                     created,
                     updated,
                 ),
@@ -377,6 +414,7 @@ class MetadataStore:
     def get_dataset_by_name(self, name: str) -> Dataset | None:
         conn = self.connect()
         try:
+            _apply_dataset_catalog_migrations(conn)
             row = conn.execute("SELECT * FROM datasets WHERE name = ?", (name,)).fetchone()
             return None if row is None else _row_to_dataset(row)
         finally:
@@ -403,6 +441,7 @@ class MetadataStore:
     def list_datasets(self) -> list[Dataset]:
         conn = self.connect()
         try:
+            _apply_dataset_catalog_migrations(conn)
             rows = conn.execute("SELECT * FROM datasets ORDER BY name").fetchall()
             return [_row_to_dataset(r) for r in rows]
         finally:
@@ -530,6 +569,22 @@ class MetadataStore:
             conn.close()
 
 
+def _tags_from_json_blob(raw: object | None) -> tuple[str, ...] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        return None
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, list):
+        return None
+    if not all(isinstance(x, str) for x in parsed):
+        return None
+    return tuple(parsed)
+
+
 def _row_to_dataset(row: sqlite3.Row) -> Dataset:
     return Dataset(
         dataset_id=int(row["dataset_id"]),
@@ -537,6 +592,10 @@ def _row_to_dataset(row: sqlite3.Row) -> Dataset:
         dataset_type=row["type"],
         uri=row["uri"],
         description=row["description"],
+        owner=row["owner"],
+        tags=_tags_from_json_blob(row["tags_json"]),
+        criticality=row["criticality"],
+        system=row["catalog_system"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )

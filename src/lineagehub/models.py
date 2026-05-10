@@ -14,6 +14,10 @@ class Dataset:
     dataset_type: str | None = None
     uri: str | None = None
     description: str | None = None
+    owner: str | None = None
+    tags: tuple[str, ...] | None = None
+    criticality: str | None = None
+    system: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
 

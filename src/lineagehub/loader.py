@@ -11,6 +11,8 @@ from typing import Any
 from lineagehub.models import Dataset, Job, LineageEdge, Run
 from lineagehub.store import MetadataStore
 
+_ALLOWED_CRITICALITY = frozenset({"low", "medium", "high", "critical"})
+
 
 def load_lineage_json(store: MetadataStore, path: str | Path) -> None:
     """Parse a lineage JSON file and persist datasets, jobs, and lineage edges.
@@ -32,12 +34,20 @@ def load_lineage_json(store: MetadataStore, path: str | Path) -> None:
         name = item.get("name")
         if not name or not isinstance(name, str):
             raise ValueError("each dataset requires a non-empty string 'name'")
+        owner = _optional_string(item, "owner", f"dataset {name!r}")
+        tags = _parse_dataset_tags(item, name)
+        criticality = _parse_criticality(item, name)
+        catalog_system = _optional_string(item, "system", f"dataset {name!r}")
         store.upsert_dataset(
             Dataset(
                 name=name,
                 dataset_type=item.get("type") if isinstance(item.get("type"), str) else None,
                 uri=item.get("uri") if isinstance(item.get("uri"), str) else None,
                 description=item.get("description") if isinstance(item.get("description"), str) else None,
+                owner=owner,
+                tags=tags,
+                criticality=criticality,
+                system=catalog_system,
             )
         )
 
@@ -134,3 +144,36 @@ def _expect_dict(obj: Any, label: str) -> dict[str, Any]:
     if not isinstance(obj, dict):
         raise ValueError(f"{label} must be a JSON object")
     return obj
+
+
+def _optional_string(item: dict[str, Any], key: str, label: str) -> str | None:
+    raw = item.get(key)
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise ValueError(f"{label}: '{key}' must be a string")
+    return raw
+
+
+def _parse_dataset_tags(item: dict[str, Any], dataset_name: str) -> tuple[str, ...] | None:
+    raw = item.get("tags")
+    if raw is None:
+        return None
+    if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
+        raise ValueError(f"dataset {dataset_name!r}: 'tags' must be a list of strings")
+    return tuple(raw)
+
+
+def _parse_criticality(item: dict[str, Any], dataset_name: str) -> str | None:
+    raw = item.get("criticality")
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise ValueError(f"dataset {dataset_name!r}: 'criticality' must be a string")
+    value = raw.strip().lower()
+    if value not in _ALLOWED_CRITICALITY:
+        raise ValueError(
+            f"dataset {dataset_name!r}: invalid criticality {raw!r}; "
+            f"expected one of {sorted(_ALLOWED_CRITICALITY)}"
+        )
+    return value

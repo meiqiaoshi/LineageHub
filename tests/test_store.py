@@ -33,6 +33,29 @@ def test_upsert_dataset_stable_id_and_roundtrip(empty_store: MetadataStore) -> N
     assert ds.uri is None
 
 
+def test_upsert_dataset_catalog_metadata_roundtrip(empty_store: MetadataStore) -> None:
+    empty_store.upsert_dataset(
+        Dataset(
+            name="mart_orders",
+            dataset_type="table",
+            uri="snowflake://db/schema/mart_orders",
+            owner="platform",
+            tags=("core", "finance"),
+            criticality="critical",
+            system="snowflake",
+        )
+    )
+    ds = empty_store.get_dataset_by_name("mart_orders")
+    assert ds is not None
+    assert ds.owner == "platform"
+    assert ds.tags == ("core", "finance")
+    assert ds.criticality == "critical"
+    assert ds.system == "snowflake"
+    listed = empty_store.list_datasets()
+    assert len(listed) == 1
+    assert listed[0].tags == ("core", "finance")
+
+
 def test_list_datasets_sorted_by_name(empty_store: MetadataStore) -> None:
     empty_store.upsert_dataset(Dataset(name="zebra"))
     empty_store.upsert_dataset(Dataset(name="alpha"))
