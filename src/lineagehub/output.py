@@ -43,6 +43,30 @@ def impact_payload(dataset: str, items: list[LineageResult]) -> dict[str, Any]:
     }
 
 
+def dataset_catalog_row(
+    *,
+    name: str,
+    dataset_type: str | None,
+    uri: str | None,
+    owner: str | None = None,
+    description: str | None = None,
+    tags: tuple[str, ...] | None = None,
+    criticality: str | None = None,
+    system: str | None = None,
+) -> dict[str, Any]:
+    """Shape for one dataset in catalog list/show JSON (nulls for missing optional fields)."""
+    return {
+        "name": name,
+        "type": dataset_type,
+        "uri": uri,
+        "owner": owner,
+        "description": description,
+        "tags": list(tags) if tags is not None else None,
+        "criticality": criticality,
+        "system": system,
+    }
+
+
 def job_show_payload(
     *,
     name: str,
@@ -71,10 +95,24 @@ def dataset_show_payload(
     consumer_jobs: list[str],
     upstream: list[LineageResult],
     downstream: list[LineageResult],
+    owner: str | None = None,
+    description: str | None = None,
+    tags: tuple[str, ...] | None = None,
+    criticality: str | None = None,
+    system: str | None = None,
 ) -> dict[str, Any]:
     return {
         "query_type": "dataset_show",
-        "dataset": {"name": name, "type": dataset_type, "uri": uri},
+        "dataset": dataset_catalog_row(
+            name=name,
+            dataset_type=dataset_type,
+            uri=uri,
+            owner=owner,
+            description=description,
+            tags=tags,
+            criticality=criticality,
+            system=system,
+        ),
         "producer_jobs": producer_jobs,
         "consumer_jobs": consumer_jobs,
         "upstream": [{"name": x.name, "distance": x.distance} for x in upstream],

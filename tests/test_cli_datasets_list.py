@@ -24,6 +24,8 @@ def test_datasets_list_text(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
     assert "- raw_orders" in out
     assert "Type: table" in out
     assert "URI: duckdb://warehouse/raw_orders" in out
+    assert "Owner: (none)" in out
+    assert "Criticality: (none)" in out
 
 
 def test_datasets_list_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -39,6 +41,40 @@ def test_datasets_list_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
     raw = next(d for d in payload["datasets"] if d["name"] == "raw_orders")
     assert raw["type"] == "table"
     assert "duckdb" in (raw["uri"] or "")
+    assert raw["owner"] is None
+    assert raw["description"] is None
+    assert raw["tags"] is None
+    assert raw["criticality"] is None
+    assert raw["system"] is None
+
+
+def test_datasets_list_text_with_catalog_metadata(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    db = tmp_path / "cat.db"
+    store = MetadataStore(db)
+    lineage = {
+        "datasets": [
+            {
+                "name": "sales_dashboard",
+                "type": "dashboard",
+                "uri": "dashboard://sales/daily",
+                "owner": "analytics",
+                "criticality": "high",
+                "system": "bi",
+                "tags": ["sales", "executive"],
+            }
+        ],
+        "jobs": [],
+    }
+
+    path = tmp_path / "lineage.json"
+    path.write_text(json.dumps(lineage), encoding="utf-8")
+    load_lineage_json(store, path)
+    assert main(["--db", str(db), "datasets", "list"]) == 0
+    out = capsys.readouterr().out
+    assert "Owner: analytics" in out
+    assert "Criticality: high" in out
+    assert "System: bi" in out
+    assert "Tags: sales, executive" in out
 
 
 def test_datasets_list_empty(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

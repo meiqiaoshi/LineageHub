@@ -101,6 +101,11 @@ class DatasetRecord:
     name: str
     dataset_type: str | None
     uri: str | None
+    owner: str | None = None
+    description: str | None = None
+    tags: tuple[str, ...] | None = None
+    criticality: str | None = None
+    system: str | None = None
 
 
 @dataclass(frozen=True)
@@ -448,11 +453,14 @@ class MetadataStore:
             conn.close()
 
     def list_dataset_records(self) -> list[DatasetRecord]:
-        """Catalog-oriented listing: id, name, type, uri; ordered by name."""
+        """Catalog-oriented listing with optional metadata; ordered by name."""
         conn = self.connect()
         try:
+            _apply_dataset_catalog_migrations(conn)
             rows = conn.execute(
-                "SELECT dataset_id, name, type, uri FROM datasets ORDER BY name"
+                """SELECT dataset_id, name, type, uri, description, owner, tags_json,
+                          criticality, catalog_system
+                   FROM datasets ORDER BY name"""
             ).fetchall()
             return [
                 DatasetRecord(
@@ -460,6 +468,11 @@ class MetadataStore:
                     name=str(r["name"]),
                     dataset_type=r["type"],
                     uri=r["uri"],
+                    description=r["description"],
+                    owner=r["owner"],
+                    tags=_tags_from_json_blob(r["tags_json"]),
+                    criticality=r["criticality"],
+                    system=r["catalog_system"],
                 )
                 for r in rows
             ]

@@ -22,6 +22,7 @@ from lineagehub.graph import (
 from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
+    dataset_catalog_row,
     dataset_show_payload,
     downstream_payload,
     job_show_payload,
@@ -194,11 +195,16 @@ def main(argv: list[str] | None = None) -> int:
                                 "query_type": "datasets_list",
                                 "count": len(rows),
                                 "datasets": [
-                                    {
-                                        "name": r.name,
-                                        "type": r.dataset_type,
-                                        "uri": r.uri,
-                                    }
+                                    dataset_catalog_row(
+                                        name=r.name,
+                                        dataset_type=r.dataset_type,
+                                        uri=r.uri,
+                                        owner=r.owner,
+                                        description=r.description,
+                                        tags=r.tags,
+                                        criticality=r.criticality,
+                                        system=r.system,
+                                    )
                                     for r in rows
                                 ],
                             }
@@ -213,8 +219,16 @@ def main(argv: list[str] | None = None) -> int:
                             print(f"- {r.name}")
                             t = r.dataset_type if r.dataset_type is not None else "(none)"
                             u = r.uri if r.uri is not None else "(none)"
+                            o = r.owner if r.owner is not None else "(none)"
+                            c = r.criticality if r.criticality is not None else "(none)"
+                            sy = r.system if r.system is not None else "(none)"
+                            tag_line = ", ".join(r.tags) if r.tags else "(none)"
                             print(f"  Type: {t}")
                             print(f"  URI: {u}")
+                            print(f"  Owner: {o}")
+                            print(f"  Criticality: {c}")
+                            print(f"  System: {sy}")
+                            print(f"  Tags: {tag_line}")
                             print()
                         return 0
                     case "show":
@@ -236,6 +250,11 @@ def main(argv: list[str] | None = None) -> int:
                                         consumer_jobs=consumers,
                                         upstream=upstream_items,
                                         downstream=downstream_items,
+                                        owner=ds.owner,
+                                        description=ds.description,
+                                        tags=ds.tags,
+                                        criticality=ds.criticality,
+                                        system=ds.system,
                                     )
                                 )
                             )
@@ -248,6 +267,11 @@ def main(argv: list[str] | None = None) -> int:
                             consumer_jobs=consumers,
                             upstream_names=[x.name for x in upstream_items],
                             downstream_names=[x.name for x in downstream_items],
+                            owner=ds.owner,
+                            description=ds.description,
+                            tags=ds.tags,
+                            criticality=ds.criticality,
+                            system=ds.system,
                         )
                         return 0
                     case _:
@@ -589,12 +613,29 @@ def _print_dataset_show(
     consumer_jobs: list[str],
     upstream_names: list[str],
     downstream_names: list[str],
+    owner: str | None = None,
+    description: str | None = None,
+    tags: tuple[str, ...] | None = None,
+    criticality: str | None = None,
+    system: str | None = None,
 ) -> None:
     t = dataset_type if dataset_type is not None else "(none)"
     u = uri if uri is not None else "(none)"
+    o = owner if owner is not None else "(none)"
+    c = criticality if criticality is not None else "(none)"
+    sy = system if system is not None else "(none)"
+    tag_line = ", ".join(tags) if tags else "(none)"
     print(f"Dataset: {name}")
     print(f"Type: {t}")
     print(f"URI: {u}")
+    print(f"Owner: {o}")
+    print(f"Criticality: {c}")
+    print(f"System: {sy}")
+    print(f"Tags: {tag_line}")
+    if description is not None:
+        print()
+        print("Description:")
+        print(description)
     print()
     print("Produced by:")
     _bullets_or_none(producer_jobs)

@@ -69,8 +69,12 @@ def test_health(api_client) -> None:
 def test_list_datasets(api_client) -> None:
     r = api_client.get("/datasets")
     assert r.status_code == 200
-    names = {row["name"] for row in r.json()}
+    body = r.json()
+    names = {row["name"] for row in body}
     assert names == {"raw_orders", "clean_orders", "mart_daily_sales", "sales_dashboard"}
+    mart = next(x for x in body if x["name"] == "mart_daily_sales")
+    assert "owner" in mart and mart["owner"] is None
+    assert "tags" in mart and mart["tags"] is None
 
 
 def test_upstream_depth_all(api_client) -> None:

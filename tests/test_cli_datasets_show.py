@@ -23,6 +23,11 @@ def test_datasets_show_raw_orders_json(tmp_path: Path, capsys: pytest.CaptureFix
     assert payload["query_type"] == "dataset_show"
     assert payload["dataset"]["name"] == "raw_orders"
     assert payload["dataset"]["type"] == "table"
+    assert payload["dataset"]["owner"] is None
+    assert payload["dataset"]["description"] is None
+    assert payload["dataset"]["tags"] is None
+    assert payload["dataset"]["criticality"] is None
+    assert payload["dataset"]["system"] is None
     assert payload["producer_jobs"] == []
     assert payload["consumer_jobs"] == ["clean_orders_job"]
     assert payload["upstream"] == []
@@ -54,6 +59,37 @@ def test_datasets_show_unknown_dataset(tmp_path: Path, capsys: pytest.CaptureFix
     load_lineage_json(store, _SAMPLE_LINEAGE)
     assert main(["--db", str(db), "datasets", "show", "no_such_table"]) == 1
     assert "Unknown dataset" in capsys.readouterr().err
+
+
+def test_datasets_show_text_catalog_section(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    db = tmp_path / "show.db"
+    store = MetadataStore(db)
+    lineage = {
+        "datasets": [
+            {
+                "name": "sales_dashboard",
+                "type": "dashboard",
+                "uri": "dashboard://sales/daily",
+                "owner": "analytics",
+                "description": "Daily sales dashboard used by business stakeholders.",
+                "tags": ["sales", "executive"],
+                "criticality": "high",
+                "system": "bi",
+            }
+        ],
+        "jobs": [],
+    }
+    path = tmp_path / "lineage.json"
+    path.write_text(json.dumps(lineage), encoding="utf-8")
+    load_lineage_json(store, path)
+    assert main(["--db", str(db), "datasets", "show", "sales_dashboard"]) == 0
+    out = capsys.readouterr().out
+    assert "Owner: analytics" in out
+    assert "Criticality: high" in out
+    assert "System: bi" in out
+    assert "Tags: sales, executive" in out
+    assert "Description:" in out
+    assert "Daily sales dashboard used by business stakeholders." in out
 
 
 def test_datasets_show_text_contains_sections(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

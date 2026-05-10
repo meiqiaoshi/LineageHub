@@ -15,6 +15,7 @@ from lineagehub.graph import (
     lineage_upstream_results,
 )
 from lineagehub.output import (
+    dataset_catalog_row,
     downstream_payload,
     impact_payload,
     run_impact_payload,
@@ -51,7 +52,17 @@ def health() -> dict[str, str]:
 def list_datasets() -> list[dict[str, Any]]:
     store = _store()
     return [
-        {"name": d.name, "type": d.dataset_type, "uri": d.uri} for d in store.list_datasets()
+        dataset_catalog_row(
+            name=d.name,
+            dataset_type=d.dataset_type,
+            uri=d.uri,
+            owner=d.owner,
+            description=d.description,
+            tags=d.tags,
+            criticality=d.criticality,
+            system=d.system,
+        )
+        for d in store.list_datasets()
     ]
 
 

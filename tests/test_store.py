@@ -78,6 +78,7 @@ def test_list_dataset_records_sorted_with_type_and_uri(empty_store: MetadataStor
         ("alpha", "file", "s3://bucket/a"),
         ("zebra", "table", "duckdb://warehouse/zebra"),
     ]
+    assert rows[0].owner is None and rows[0].criticality is None and rows[0].tags is None
     assert rows[0].dataset_id >= 1
     assert rows[1].dataset_id >= 1
 
