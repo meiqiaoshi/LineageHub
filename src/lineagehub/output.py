@@ -43,6 +43,25 @@ def impact_payload(dataset: str, items: list[LineageResult]) -> dict[str, Any]:
     }
 
 
+def job_show_payload(
+    *,
+    name: str,
+    description: str | None,
+    inputs: list[str],
+    outputs: list[str],
+    latest_run: dict[str, str] | None,
+    run_count: int,
+) -> dict[str, Any]:
+    return {
+        "query_type": "job_show",
+        "job": {"name": name, "description": description},
+        "inputs": inputs,
+        "outputs": outputs,
+        "latest_run": latest_run,
+        "run_count": run_count,
+    }
+
+
 def dataset_show_payload(
     *,
     name: str,

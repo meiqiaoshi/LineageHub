@@ -24,6 +24,7 @@ from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
     dataset_show_payload,
     downstream_payload,
+    job_show_payload,
     dumps_json,
     format_edges_dot,
     format_edges_mermaid,
@@ -70,6 +71,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_jobs_list = jobs_sub.add_parser("list", help="List all jobs")
     p_jobs_list.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    p_jobs_show = jobs_sub.add_parser("show", help="Show one job (inputs, outputs, runs)")
+    p_jobs_show.add_argument("job", help="Job name")
+    p_jobs_show.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_runs = sub.add_parser("runs", help="Operational queries over pipeline runs")
     runs_sub = p_runs.add_subparsers(dest="runs_command", required=True)
@@ -272,6 +277,43 @@ def main(argv: list[str] | None = None) -> int:
                             d = r.description if r.description is not None else "(none)"
                             print(f"  Description: {d}")
                             print()
+                        return 0
+                    case "show":
+                        job = store.get_job_by_name(args.job)
+                        if job is None or job.job_id is None:
+                            raise ValueError(f"Unknown job: {args.job!r}")
+                        inputs = store.list_input_dataset_names_for_job(job.job_id)
+                        outputs = store.list_output_dataset_names_for_job(job.job_id)
+                        latest = store.get_latest_run(args.job)
+                        run_count = store.count_runs_for_job(job.job_id)
+                        latest_json = None
+                        if latest is not None:
+                            latest_json = {
+                                "run_id": _run_display_id(latest),
+                                "status": latest.status,
+                            }
+                        if args.json:
+                            sys.stdout.write(
+                                dumps_json(
+                                    job_show_payload(
+                                        name=job.name,
+                                        description=job.description,
+                                        inputs=inputs,
+                                        outputs=outputs,
+                                        latest_run=latest_json,
+                                        run_count=run_count,
+                                    )
+                                )
+                            )
+                            return 0
+                        _print_job_show(
+                            name=job.name,
+                            description=job.description,
+                            inputs=inputs,
+                            outputs=outputs,
+                            latest=latest,
+                            run_count=run_count,
+                        )
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled jobs command: {args.jobs_command!r}")
@@ -505,6 +547,37 @@ def _bullets_or_none(names: list[str]) -> None:
         return
     for n in names:
         print(f"- {n}")
+
+
+def _print_job_show(
+    *,
+    name: str,
+    description: str | None,
+    inputs: list[str],
+    outputs: list[str],
+    latest: RunRecord | None,
+    run_count: int,
+) -> None:
+    print(f"Job: {name}")
+    if description is not None:
+        print()
+        print("Description:")
+        print(description)
+    print()
+    print("Input datasets:")
+    _bullets_or_none(inputs)
+    print()
+    print("Output datasets:")
+    _bullets_or_none(outputs)
+    print()
+    print("Latest run:")
+    if latest is None:
+        print("(none)")
+    else:
+        print(f"- {_run_display_id(latest)}")
+        print(f"  Status: {latest.status}")
+    print()
+    print(f"Recent runs: {run_count}")
 
 
 def _print_dataset_show(

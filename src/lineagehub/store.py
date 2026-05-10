@@ -477,6 +477,47 @@ class MetadataStore:
         finally:
             conn.close()
 
+    def list_input_dataset_names_for_job(self, job_id: int) -> list[str]:
+        """Distinct upstream dataset names for edges attributed to this job."""
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                """SELECT DISTINCT datasets.name FROM lineage_edges
+                   INNER JOIN datasets ON lineage_edges.upstream_dataset_id = datasets.dataset_id
+                   WHERE lineage_edges.job_id = ?
+                   ORDER BY datasets.name""",
+                (job_id,),
+            ).fetchall()
+            return [str(r["name"]) for r in rows]
+        finally:
+            conn.close()
+
+    def list_output_dataset_names_for_job(self, job_id: int) -> list[str]:
+        """Distinct downstream dataset names for edges attributed to this job."""
+        conn = self.connect()
+        try:
+            rows = conn.execute(
+                """SELECT DISTINCT datasets.name FROM lineage_edges
+                   INNER JOIN datasets ON lineage_edges.downstream_dataset_id = datasets.dataset_id
+                   WHERE lineage_edges.job_id = ?
+                   ORDER BY datasets.name""",
+                (job_id,),
+            ).fetchall()
+            return [str(r["name"]) for r in rows]
+        finally:
+            conn.close()
+
+    def count_runs_for_job(self, job_id: int) -> int:
+        conn = self.connect()
+        try:
+            _apply_runs_migrations(conn)
+            row = conn.execute(
+                "SELECT COUNT(*) AS c FROM runs WHERE job_id = ?", (job_id,)
+            ).fetchone()
+            return int(row["c"])
+        finally:
+            conn.close()
+
     def list_lineage_edges(self) -> list[LineageEdge]:
         conn = self.connect()
         try:
