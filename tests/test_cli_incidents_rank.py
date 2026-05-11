@@ -76,9 +76,13 @@ def test_incidents_rank_json_shape(tmp_path: Path, capsys: pytest.CaptureFixture
     assert main(["--db", str(db), "incidents", "rank", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["query_type"] == "incident_ranking"
-    assert payload["ranking_method"] == "affected_dataset_count"
+    assert payload["ranking_method"] == "criticality_weighted"
+    assert payload["scoring_method"] == "criticality_weighted"
     assert payload["incidents"][0]["rank"] == 1
-    assert payload["incidents"][0]["affected_count"] == payload["incidents"][0]["blast_radius_score"]
+    top = payload["incidents"][0]
+    assert top["affected_count"] == 2
+    assert top["blast_radius_score"] == 4
+    assert top["scoring_method"] == "criticality_weighted"
 
 
 def test_incidents_rank_empty(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

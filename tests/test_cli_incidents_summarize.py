@@ -61,8 +61,10 @@ def test_incidents_summarize_json(tmp_path: Path, capsys: pytest.CaptureFixture[
     assert main(["--db", str(db), "incidents", "summarize", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["query_type"] == "incident_summary"
+    assert payload["scoring_method"] == "criticality_weighted"
     assert payload["incident_count"] == 1
     assert payload["incidents"][0]["run_id"] == "run_bad"
+    assert payload["incidents"][0]["scoring_method"] == "criticality_weighted"
 
 
 def test_incidents_summarize_no_incidents(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

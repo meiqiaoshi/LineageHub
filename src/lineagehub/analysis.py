@@ -5,18 +5,65 @@ from __future__ import annotations
 from typing import Any
 
 from lineagehub.graph import analyze_run_impact
+from lineagehub.models import RunImpactRow
 from lineagehub.store import MetadataStore
 
+SCORING_METHOD_CRITICALITY_WEIGHTED = "criticality_weighted"
 
-def _severity_from_blast_radius(score: int) -> str:
-    """Explainable severity buckets for portfolio demos (score = affected downstream dataset count)."""
+# Weights for ``blast_radius_score`` (sum over affected downstream datasets).
+_CRITICALITY_WEIGHTS: dict[str, int] = {
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+    "critical": 5,
+}
+# Missing or unrecognized criticality in the store defaults to the same weight as ``medium``.
+UNKNOWN_CRITICALITY_WEIGHT = 2
+
+
+def criticality_weight(criticality: str | None) -> int:
+    """Return the numeric weight for a dataset criticality value.
+
+    ``None`` and unknown strings use ``UNKNOWN_CRITICALITY_WEIGHT`` (2), documented for explainability.
+    """
+    if criticality is None:
+        return UNKNOWN_CRITICALITY_WEIGHT
+    key = criticality.strip().lower()
+    return _CRITICALITY_WEIGHTS.get(key, UNKNOWN_CRITICALITY_WEIGHT)
+
+
+def _severity_from_weighted_score(score: int) -> str:
+    """Severity buckets from the criticality-weighted blast radius score."""
     if score <= 0:
         return "none"
-    if score <= 2:
+    if score <= 3:
         return "low"
-    if score <= 5:
+    if score <= 8:
         return "medium"
     return "high"
+
+
+def _weighted_blast_and_affected_payload(
+    store: MetadataStore, affected: tuple[RunImpactRow, ...]
+) -> tuple[int, int, list[dict[str, Any]]]:
+    """Returns (weighted_score, affected_count, affected_datasets rows with per-row weights)."""
+    rows_out: list[dict[str, Any]] = []
+    total_weight = 0
+    for row in affected:
+        ds = store.get_dataset_by_name(row.name)
+        crit = ds.criticality if ds is not None else None
+        w = criticality_weight(crit)
+        total_weight += w
+        rows_out.append(
+            {
+                "name": row.name,
+                "distance": row.distance,
+                "source_output": row.source_output,
+                "criticality": crit,
+                "criticality_weight": w,
+            }
+        )
+    return total_weight, len(affected), rows_out
 
 
 def summarize_failed_runs(
@@ -37,15 +84,9 @@ def summarize_failed_runs(
         if ext is None:
             continue
         analysis = analyze_run_impact(store, ext)
-        affected_payload = [
-            {
-                "name": row.name,
-                "distance": row.distance,
-                "source_output": row.source_output,
-            }
-            for row in analysis.affected
-        ]
-        blast_radius_score = len(analysis.affected)
+        blast_radius_score, affected_count, affected_payload = _weighted_blast_and_affected_payload(
+            store, analysis.affected
+        )
         incidents.append(
             {
                 "run_id": ext,
@@ -53,8 +94,10 @@ def summarize_failed_runs(
                 "status": r.status,
                 "output_datasets": list(analysis.output_datasets),
                 "affected_datasets": affected_payload,
+                "affected_count": affected_count,
                 "blast_radius_score": blast_radius_score,
-                "severity": _severity_from_blast_radius(blast_radius_score),
+                "severity": _severity_from_weighted_score(blast_radius_score),
+                "scoring_method": SCORING_METHOD_CRITICALITY_WEIGHTED,
             }
         )
 
@@ -63,10 +106,11 @@ def summarize_failed_runs(
     return {
         "query_type": "incident_summary",
         "status": status,
+        "scoring_method": SCORING_METHOD_CRITICALITY_WEIGHTED,
         "incident_count": len(incidents),
         "incidents": incidents,
         "max_blast_radius_score": max_score,
-        "highest_severity": _severity_from_blast_radius(max_score),
+        "highest_severity": _severity_from_weighted_score(max_score),
     }
 
 
@@ -79,7 +123,8 @@ def incident_ranking(
     limit_ranked: int | None = None,
 ) -> dict[str, Any]:
     """
-    Rank incidents by ``blast_radius_score`` descending (stable tie-break: ``run_id`` descending).
+    Rank incidents by criticality-weighted ``blast_radius_score`` descending
+    (stable tie-break: ``run_id`` descending).
 
     ``limit_runs`` caps rows fed into summary (same as ``summarize_failed_runs(..., limit=...)``).
     ``limit_ranked`` caps how many ranked rows appear after sorting (CLI/API ``--limit`` on rank).
@@ -95,7 +140,8 @@ def incident_ranking(
 
     return {
         "query_type": "incident_ranking",
-        "ranking_method": "affected_dataset_count",
+        "ranking_method": SCORING_METHOD_CRITICALITY_WEIGHTED,
+        "scoring_method": SCORING_METHOD_CRITICALITY_WEIGHTED,
         "incidents": [
             {
                 "rank": idx,
@@ -103,7 +149,8 @@ def incident_ranking(
                 "job_name": inc["job_name"],
                 "blast_radius_score": inc["blast_radius_score"],
                 "severity": inc["severity"],
-                "affected_count": inc["blast_radius_score"],
+                "affected_count": inc["affected_count"],
+                "scoring_method": inc["scoring_method"],
             }
             for idx, inc in enumerate(ranked_incidents, start=1)
         ],

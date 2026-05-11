@@ -142,8 +142,10 @@ def test_api_incidents_summary(api_client) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["query_type"] == "incident_summary"
+    assert body["scoring_method"] == "criticality_weighted"
     assert body["incident_count"] == 2
     assert {inc["run_id"] for inc in body["incidents"]} == {"run_001", "run_003"}
+    assert all(inc["scoring_method"] == "criticality_weighted" for inc in body["incidents"])
 
 
 def test_api_incidents_summary_limit(api_client) -> None:
@@ -159,6 +161,7 @@ def test_api_incidents_rank(api_client) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["query_type"] == "incident_ranking"
+    assert body["ranking_method"] == "criticality_weighted"
     ids = [row["run_id"] for row in body["incidents"]]
     assert ids == ["run_001", "run_003"]
 
