@@ -51,6 +51,66 @@ def impact_analysis(store: MetadataStore, dataset_name: str) -> list[str]:
     return get_downstream(store, dataset_name)
 
 
+def find_cycles(store: MetadataStore) -> list[list[str]]:
+    """Return directed cycles as name lists ``[v0, v1, ..., v0]`` (first vertex repeated at end).
+
+    Deterministic: neighbors are visited in dataset name order; reported cycles use a canonical
+    rotation (lexicographically smallest rotation of the vertex sequence) then sorted by that tuple.
+    """
+    edges = store.list_lineage_edges()
+    if not edges:
+        return []
+
+    id_to_name = _id_to_name_map(store)
+    forward = _build_forward_adjacency(edges)
+    for uid in list(forward.keys()):
+        forward[uid] = sorted(set(forward[uid]), key=lambda i: id_to_name[i])
+
+    nodes: set[int] = set()
+    for e in edges:
+        nodes.add(e.upstream_dataset_id)
+        nodes.add(e.downstream_dataset_id)
+
+    color: dict[int, int] = {}
+    WHITE, GRAY, BLACK = 0, 1, 2
+    stack: list[int] = []
+    canon_seen: set[tuple[str, ...]] = set()
+    cycles_out: list[list[str]] = []
+
+    def canonical_closed_path(names: list[str]) -> tuple[str, ...]:
+        if len(names) < 2 or names[0] != names[-1]:
+            raise ValueError("expected closed path with matching endpoints")
+        core = names[:-1]
+        n = len(core)
+        best = min(tuple(core[i:] + core[:i]) for i in range(n))
+        return best + (best[0],)
+
+    def dfs_visit(u: int) -> None:
+        color[u] = GRAY
+        stack.append(u)
+        for v in forward.get(u, []):
+            cv = color.get(v, WHITE)
+            if cv == WHITE:
+                dfs_visit(v)
+            elif cv == GRAY:
+                idx = stack.index(v)
+                path_ids = stack[idx:] + [v]
+                names = [id_to_name[i] for i in path_ids]
+                key = canonical_closed_path(names)
+                if key not in canon_seen:
+                    canon_seen.add(key)
+                    cycles_out.append(list(key))
+        stack.pop()
+        color[u] = BLACK
+
+    for start in sorted(nodes, key=lambda i: id_to_name[i]):
+        if color.get(start, WHITE) == WHITE:
+            dfs_visit(start)
+
+    cycles_out.sort(key=lambda c: tuple(c))
+    return cycles_out
+
+
 def lineage_upstream_results(
     store: MetadataStore, dataset_name: str, *, depth: DepthSpec
 ) -> list[LineageResult]:

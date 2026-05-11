@@ -3,6 +3,7 @@
 from lineagehub.graph import (
     analyze_run_impact,
     collect_graph_edges,
+    find_cycles,
     get_direct_downstream,
     get_direct_upstream,
     get_downstream,
@@ -47,5 +48,6 @@ __all__ = [
     "lineage_impact_results",
     "collect_graph_edges",
     "analyze_run_impact",
+    "find_cycles",
     "__version__",
 ]
