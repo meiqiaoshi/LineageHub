@@ -79,7 +79,7 @@ lineagehub upstream mart_daily_sales
 lineagehub downstream raw_orders
 lineagehub impact raw_orders
 lineagehub impact-run run_001
-lineagehub graph mart_daily_sales
+lineagehub graph edges mart_daily_sales
 lineagehub runs list --status failed
 lineagehub runs latest --job clean_orders_job
 lineagehub incidents summarize --json

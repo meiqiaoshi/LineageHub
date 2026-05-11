@@ -53,6 +53,7 @@ def test_graph_mermaid_stdout(tmp_path: Path, capsys: pytest.CaptureFixture[str]
                 "--db",
                 str(db),
                 "graph",
+                "edges",
                 "raw_orders",
                 "--direction",
                 "downstream",

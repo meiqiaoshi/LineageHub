@@ -13,6 +13,14 @@ def dumps_json(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, sort_keys=True) + "\n"
 
 
+def graph_cycles_payload(cycles: list[list[str]]) -> dict[str, Any]:
+    return {
+        "query_type": "graph_cycles",
+        "cycle_count": len(cycles),
+        "cycles": cycles,
+    }
+
+
 def upstream_payload(dataset: str, depth: str, items: list[LineageResult]) -> dict[str, Any]:
     return {
         "query_type": "upstream",

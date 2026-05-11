@@ -10,6 +10,7 @@ from pathlib import Path
 from lineagehub.graph import (
     analyze_run_impact,
     collect_graph_edges,
+    find_cycles,
     get_direct_downstream,
     get_direct_upstream,
     get_downstream,
@@ -30,6 +31,7 @@ from lineagehub.output import (
     format_edges_dot,
     format_edges_mermaid,
     format_edges_text,
+    graph_cycles_payload,
     impact_payload,
     run_impact_payload,
     upstream_payload,
@@ -115,21 +117,27 @@ def main(argv: list[str] | None = None) -> int:
     p_impact.add_argument("dataset", help="Dataset name")
     p_impact.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
-    p_graph = sub.add_parser("graph", help="Export lineage edges for a dataset")
-    p_graph.add_argument("dataset", help="Dataset name")
-    p_graph.add_argument(
+    p_graph = sub.add_parser("graph", help="Lineage graph export and cycle detection")
+    graph_sub = p_graph.add_subparsers(dest="graph_command", required=True)
+
+    p_graph_edges = graph_sub.add_parser("edges", help="Export lineage edges for a dataset")
+    p_graph_edges.add_argument("dataset", help="Dataset name")
+    p_graph_edges.add_argument(
         "--direction",
         choices=["upstream", "downstream", "both"],
         default="downstream",
         help="Which edges to include (default: downstream)",
     )
-    p_graph.add_argument("--depth", **depth_opt)
-    p_graph.add_argument(
+    p_graph_edges.add_argument("--depth", **depth_opt)
+    p_graph_edges.add_argument(
         "--format",
         choices=["text", "mermaid", "dot"],
         default="text",
         help="Output format (default: text)",
     )
+
+    p_graph_cycles = graph_sub.add_parser("cycles", help="List directed cycles in stored lineage")
+    p_graph_cycles.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_impact_run = sub.add_parser(
         "impact-run",
@@ -510,22 +518,38 @@ def main(argv: list[str] | None = None) -> int:
                 _print_bullets(rows)
                 return 0
             case "graph":
-                edges = collect_graph_edges(
-                    store,
-                    args.dataset,
-                    direction=args.direction,
-                    depth=args.depth,
-                )
-                match args.format:
-                    case "text":
-                        sys.stdout.write(format_edges_text(edges))
-                    case "mermaid":
-                        sys.stdout.write(format_edges_mermaid(edges))
-                    case "dot":
-                        sys.stdout.write(format_edges_dot(edges))
+                match args.graph_command:
+                    case "edges":
+                        edges = collect_graph_edges(
+                            store,
+                            args.dataset,
+                            direction=args.direction,
+                            depth=args.depth,
+                        )
+                        match args.format:
+                            case "text":
+                                sys.stdout.write(format_edges_text(edges))
+                            case "mermaid":
+                                sys.stdout.write(format_edges_mermaid(edges))
+                            case "dot":
+                                sys.stdout.write(format_edges_dot(edges))
+                            case _:
+                                raise RuntimeError(f"unhandled format: {args.format!r}")
+                        return 0
+                    case "cycles":
+                        cycles = find_cycles(store)
+                        if args.json:
+                            sys.stdout.write(dumps_json(graph_cycles_payload(cycles)))
+                            return 0
+                        if not cycles:
+                            print("No lineage cycles detected.")
+                        else:
+                            print("Detected lineage cycles:\n")
+                            for idx, cyc in enumerate(cycles, start=1):
+                                print(f"{idx}. {' -> '.join(cyc)}")
+                        return 0
                     case _:
-                        raise RuntimeError(f"unhandled format: {args.format!r}")
-                return 0
+                        raise RuntimeError(f"unhandled graph command: {args.graph_command!r}")
             case "impact-run":
                 analysis = analyze_run_impact(store, args.run_id)
                 if args.json:

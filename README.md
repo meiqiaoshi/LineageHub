@@ -104,7 +104,7 @@ Downstream assets affected by raw_orders:
 Using **`examples/sample_lineage.json`**, downstream from the root dataset lists every hop toward dashboards:
 
 ```bash
-lineagehub graph raw_orders
+lineagehub graph edges raw_orders
 ```
 
 Example output (text mode sorts edges by upstream then downstream name):
@@ -471,10 +471,12 @@ lineagehub impact raw_orders --json
 Export edges for visualization (**`--direction`**: `upstream` \| `downstream` \| `both`; **`--format`**: `text` \| `mermaid` \| `dot`; defaults: downstream + all hops + text):
 
 ```bash
-lineagehub graph raw_orders
-lineagehub graph mart_daily_sales --direction upstream --depth direct --format text
-lineagehub graph raw_orders --format mermaid
-lineagehub graph raw_orders --format dot
+lineagehub graph edges raw_orders
+lineagehub graph edges mart_daily_sales --direction upstream --depth direct --format text
+lineagehub graph edges raw_orders --format mermaid
+lineagehub graph edges raw_orders --format dot
+lineagehub graph cycles
+lineagehub graph cycles --json
 ```
 
 Use a different database path with `--db` or the `LINEAGEHUB_DB` environment variable:
@@ -543,7 +545,7 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), graph traversal with **`--depth`** / **`--json`**, **`graph`** export (text / Mermaid / DOT), **`impact-run`**, operational **`runs`** / **`incidents`** CLI and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
 
 **Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
 
