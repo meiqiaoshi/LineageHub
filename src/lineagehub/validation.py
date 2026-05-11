@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from lineagehub.graph import find_cycles
 from lineagehub.store import (
     MetadataStore,
     _apply_dataset_catalog_migrations,
@@ -20,7 +21,8 @@ def validate_metadata(store: MetadataStore) -> dict[str, Any]:
 
     Unknown/missing dataset or job references on edges are treated as **errors** (e.g. legacy
     databases loaded with ``PRAGMA foreign_keys`` disabled). Jobs with no lineage edges as
-    inputs or outputs, and datasets that never appear on an edge, are **warnings**.
+    inputs or outputs, datasets that never appear on an edge, and **directed lineage cycles**
+    are **warnings** (cycles use code ``lineage_cycle_detected``).
     """
     errors: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
@@ -164,6 +166,16 @@ def validate_metadata(store: MetadataStore) -> dict[str, Any]:
 
     finally:
         conn.close()
+
+    for cyc in find_cycles(store):
+        arrow = " -> ".join(cyc)
+        warnings.append(
+            {
+                "code": "lineage_cycle_detected",
+                "message": f"Lineage cycle detected: {arrow}",
+                "cycle": list(cyc),
+            }
+        )
 
     status = "fail" if errors else "pass"
     return {

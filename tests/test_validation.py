@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from lineagehub.loader import load_lineage_json, load_runs_json
-from lineagehub.models import Dataset, Job
+from lineagehub.models import Dataset, Job, LineageEdge
 from lineagehub.store import MetadataStore, utc_now_iso
 from lineagehub.validation import validate_metadata
 
@@ -185,3 +185,20 @@ def test_validation_empty_store_passes(empty_store: MetadataStore) -> None:
     assert out["status"] == "pass"
     assert out["errors"] == []
     assert out["warnings"] == []
+
+
+def test_validation_warns_on_lineage_cycle(tmp_path: Path) -> None:
+    db = tmp_path / "v.db"
+    store = MetadataStore(db)
+    store.init_schema()
+    a = store.upsert_dataset(Dataset(name="A"))
+    b = store.upsert_dataset(Dataset(name="B"))
+    store.insert_lineage_edge(LineageEdge(upstream_dataset_id=a, downstream_dataset_id=b, job_id=None))
+    store.insert_lineage_edge(LineageEdge(upstream_dataset_id=b, downstream_dataset_id=a, job_id=None))
+    out = validate_metadata(store)
+    assert out["status"] == "pass"
+    assert out["error_count"] == 0
+    assert out["warning_count"] >= 1
+    cyc = next(w for w in out["warnings"] if w["code"] == "lineage_cycle_detected")
+    assert cyc["cycle"] == ["A", "B", "A"]
+    assert "A -> B -> A" in cyc["message"]

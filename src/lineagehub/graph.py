@@ -62,14 +62,19 @@ def find_cycles(store: MetadataStore) -> list[list[str]]:
         return []
 
     id_to_name = _id_to_name_map(store)
-    forward = _build_forward_adjacency(edges)
+    valid_ids = set(id_to_name.keys())
+    forward: dict[int, list[int]] = defaultdict(list)
+    for e in edges:
+        if e.upstream_dataset_id in valid_ids and e.downstream_dataset_id in valid_ids:
+            forward[e.upstream_dataset_id].append(e.downstream_dataset_id)
     for uid in list(forward.keys()):
         forward[uid] = sorted(set(forward[uid]), key=lambda i: id_to_name[i])
 
     nodes: set[int] = set()
     for e in edges:
-        nodes.add(e.upstream_dataset_id)
-        nodes.add(e.downstream_dataset_id)
+        if e.upstream_dataset_id in valid_ids and e.downstream_dataset_id in valid_ids:
+            nodes.add(e.upstream_dataset_id)
+            nodes.add(e.downstream_dataset_id)
 
     color: dict[int, int] = {}
     WHITE, GRAY, BLACK = 0, 1, 2
