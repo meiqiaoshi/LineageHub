@@ -35,6 +35,7 @@ from lineagehub.output import (
     upstream_payload,
 )
 from lineagehub.store import MetadataStore, RunRecord
+from lineagehub.validation import validate_metadata
 
 
 def default_db_path() -> str:
@@ -171,6 +172,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_inc_rank.add_argument("--limit", type=int, help="Max number of incidents to return")
     p_inc_rank.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    p_validate = sub.add_parser("validate", help="Validate metadata health (datasets, jobs, runs, lineage)")
+    p_validate.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    p_doctor = sub.add_parser("doctor", help="Alias for validate")
+    p_doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     args = parser.parse_args(argv)
     db_path = Path(args.db)
@@ -536,11 +543,42 @@ def main(argv: list[str] | None = None) -> int:
                 print("Downstream affected datasets:")
                 _print_bullets([r.name for r in analysis.affected])
                 return 0
+            case "validate" | "doctor":
+                result = validate_metadata(store)
+                if args.json:
+                    sys.stdout.write(dumps_json(result))
+                    return 1 if result["status"] == "fail" else 0
+                _print_validation_text(result)
+                return 1 if result["status"] == "fail" else 0
             case _:
                 raise RuntimeError(f"unhandled command: {args.command!r}")
     except ValueError as e:
         print(str(e), file=sys.stderr)
         return 1
+
+
+def _print_validation_text(result: dict) -> None:
+    label = "PASS" if result["status"] == "pass" else "FAIL"
+    print(f"Metadata validation: {label}\n")
+    print("Warnings:")
+    warnings = result.get("warnings") or []
+    if not warnings:
+        print("- None")
+    else:
+        for w in warnings:
+            code = w.get("code", "?")
+            msg = w.get("message", "")
+            print(f"- {code}: {msg}")
+    print()
+    print("Errors:")
+    errors = result.get("errors") or []
+    if not errors:
+        print("- None")
+    else:
+        for e in errors:
+            code = e.get("code", "?")
+            msg = e.get("message", "")
+            print(f"- {code}: {msg}")
 
 
 def _print_bullets(names: list[str]) -> None:
