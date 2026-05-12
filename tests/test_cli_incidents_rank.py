@@ -81,7 +81,7 @@ def test_incidents_rank_json_shape(tmp_path: Path, capsys: pytest.CaptureFixture
     assert payload["incidents"][0]["rank"] == 1
     top = payload["incidents"][0]
     assert top["affected_count"] == 2
-    assert top["blast_radius_score"] == 4
+    assert top["blast_radius_score"] == 8
     assert top["scoring_method"] == "criticality_weighted"
 
 

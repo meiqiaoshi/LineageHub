@@ -240,7 +240,7 @@ These may be added in later phases.
 
 ## Example lineage definition
 
-The checked-in file **`examples/sample_lineage.json`** defines the graph used above (including **`sales_dashboard`** and the job that produces it). Inline copy for reference:
+The checked-in file **`examples/sample_lineage.json`** defines the graph (datasets include optional catalog fields: owner, description, tags, criticality across **low / medium / high / critical**, and system). Inline copy for reference:
 
 ```json
 {
@@ -248,22 +248,42 @@ The checked-in file **`examples/sample_lineage.json`** defines the graph used ab
     {
       "name": "raw_orders",
       "type": "table",
-      "uri": "duckdb://warehouse/raw_orders"
+      "uri": "duckdb://warehouse/raw_orders",
+      "owner": "ingestion-team",
+      "description": "Bronze-layer raw order events ingested from the operational database.",
+      "tags": ["bronze", "orders", "source-of-truth"],
+      "criticality": "low",
+      "system": "duckdb"
     },
     {
       "name": "clean_orders",
       "type": "table",
-      "uri": "duckdb://warehouse/clean_orders"
+      "uri": "duckdb://warehouse/clean_orders",
+      "owner": "platform",
+      "description": "Silver-layer validated and deduplicated orders.",
+      "tags": ["silver", "orders"],
+      "criticality": "medium",
+      "system": "duckdb"
     },
     {
       "name": "mart_daily_sales",
       "type": "table",
-      "uri": "duckdb://warehouse/mart_daily_sales"
+      "uri": "duckdb://warehouse/mart_daily_sales",
+      "owner": "analytics-engineering",
+      "description": "Gold daily sales aggregates for reporting and downstream BI.",
+      "tags": ["gold", "finance", "aggregates"],
+      "criticality": "high",
+      "system": "duckdb"
     },
     {
       "name": "sales_dashboard",
       "type": "dashboard",
-      "uri": "dashboard://sales/daily"
+      "uri": "dashboard://sales/daily",
+      "owner": "analytics",
+      "description": "Daily sales dashboard used by business stakeholders.",
+      "tags": ["sales", "executive", "bi"],
+      "criticality": "critical",
+      "system": "bi"
     }
   ],
   "jobs": [

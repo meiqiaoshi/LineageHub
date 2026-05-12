@@ -23,11 +23,10 @@ def test_datasets_show_raw_orders_json(tmp_path: Path, capsys: pytest.CaptureFix
     assert payload["query_type"] == "dataset_show"
     assert payload["dataset"]["name"] == "raw_orders"
     assert payload["dataset"]["type"] == "table"
-    assert payload["dataset"]["owner"] is None
-    assert payload["dataset"]["description"] is None
-    assert payload["dataset"]["tags"] is None
-    assert payload["dataset"]["criticality"] is None
-    assert payload["dataset"]["system"] is None
+    assert payload["dataset"]["owner"] == "ingestion-team"
+    assert payload["dataset"]["criticality"] == "low"
+    assert payload["dataset"]["system"] == "duckdb"
+    assert payload["dataset"]["tags"] == ["bronze", "orders", "source-of-truth"]
     assert payload["producer_jobs"] == []
     assert payload["consumer_jobs"] == ["clean_orders_job"]
     assert payload["upstream"] == []

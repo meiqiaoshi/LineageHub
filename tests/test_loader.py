@@ -18,15 +18,21 @@ def test_load_sample_populates_edges(empty_store: MetadataStore, tmp_path: Path)
     assert len(empty_store.list_lineage_edges()) == 3
 
 
-def test_load_sample_optional_catalog_fields_omitted(empty_store: MetadataStore) -> None:
+def test_load_sample_includes_catalog_metadata(empty_store: MetadataStore) -> None:
     sample = Path(__file__).resolve().parent.parent / "examples" / "sample_lineage.json"
     load_lineage_json(empty_store, sample)
-    ds = empty_store.get_dataset_by_name("sales_dashboard")
-    assert ds is not None
-    assert ds.owner is None
-    assert ds.tags is None
-    assert ds.criticality is None
-    assert ds.system is None
+    raw = empty_store.get_dataset_by_name("raw_orders")
+    assert raw is not None
+    assert raw.criticality == "low"
+    assert raw.owner == "ingestion-team"
+    assert "bronze" in (raw.tags or ())
+    mart = empty_store.get_dataset_by_name("mart_daily_sales")
+    assert mart is not None
+    assert mart.criticality == "high"
+    dash = empty_store.get_dataset_by_name("sales_dashboard")
+    assert dash is not None
+    assert dash.criticality == "critical"
+    assert dash.system == "bi"
 
 
 def test_loader_rejects_unknown_upstream_dataset(empty_store: MetadataStore, tmp_path: Path) -> None:

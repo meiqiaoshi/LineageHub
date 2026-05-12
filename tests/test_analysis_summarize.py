@@ -62,12 +62,13 @@ def test_summarize_one_failed_run_with_downstream(tmp_path: Path) -> None:
     assert inc["affected_datasets"][0]["distance"] == 1
     assert inc["affected_datasets"][0]["source_output"] == "clean_orders"
     assert inc["affected_count"] == 2
-    assert inc["blast_radius_score"] == 4
+    assert inc["blast_radius_score"] == 8
     assert inc["scoring_method"] == "criticality_weighted"
     assert inc["severity"] == "medium"
-    assert out["max_blast_radius_score"] == 4
+    assert out["max_blast_radius_score"] == 8
     assert out["highest_severity"] == "medium"
-    assert all(a["criticality_weight"] == 2 for a in inc["affected_datasets"])
+    weights = {a["name"]: a["criticality_weight"] for a in inc["affected_datasets"]}
+    assert weights == {"mart_daily_sales": 3, "sales_dashboard": 5}
 
 
 def test_summarize_multiple_failed_runs(tmp_path: Path) -> None:
@@ -102,11 +103,11 @@ def test_summarize_multiple_failed_runs(tmp_path: Path) -> None:
     assert out["incident_count"] == 2
     assert [i["run_id"] for i in out["incidents"]] == ["run_b", "run_a"]
     assert out["incidents"][0]["affected_count"] == 1
-    assert out["incidents"][0]["blast_radius_score"] == 2
-    assert out["incidents"][0]["severity"] == "low"
+    assert out["incidents"][0]["blast_radius_score"] == 5
+    assert out["incidents"][0]["severity"] == "medium"
     assert out["incidents"][1]["affected_count"] == 2
-    assert out["incidents"][1]["blast_radius_score"] == 4
-    assert out["max_blast_radius_score"] == 4
+    assert out["incidents"][1]["blast_radius_score"] == 8
+    assert out["max_blast_radius_score"] == 8
     assert out["highest_severity"] == "medium"
 
 
@@ -398,5 +399,5 @@ def test_incident_ranking_orders_by_weighted_blast_radius(tmp_path: Path) -> Non
     assert ranked["ranking_method"] == "criticality_weighted"
     rows = ranked["incidents"]
     assert [r["run_id"] for r in rows] == ["run_a", "run_b"]
-    assert rows[0]["blast_radius_score"] == 4
-    assert rows[1]["blast_radius_score"] == 2
+    assert rows[0]["blast_radius_score"] == 8
+    assert rows[1]["blast_radius_score"] == 5
