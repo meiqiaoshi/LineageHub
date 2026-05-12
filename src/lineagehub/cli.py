@@ -74,6 +74,22 @@ def main(argv: list[str] | None = None) -> int:
         help="Output format (default: json)",
     )
 
+    p_export_incidents = export_sub.add_parser(
+        "incidents",
+        help="Export incident summary or ranking as JSON (same payloads as incidents summarize / rank)",
+    )
+    p_export_incidents.add_argument(
+        "--ranked",
+        action="store_true",
+        help="Emit incident_ranking instead of incident_summary",
+    )
+    p_export_incidents.add_argument(
+        "--format",
+        choices=["json"],
+        default="json",
+        help="Output format (default: json)",
+    )
+
     p_datasets = sub.add_parser("datasets", help="Dataset catalog")
     datasets_sub = p_datasets.add_subparsers(dest="datasets_command", required=True)
 
@@ -221,6 +237,15 @@ def main(argv: list[str] | None = None) -> int:
                         if args.format != "json":
                             raise RuntimeError(f"unhandled export format: {args.format!r}")
                         sys.stdout.write(dumps_json(lineage_export_payload(store)))
+                        return 0
+                    case "incidents":
+                        if args.format != "json":
+                            raise RuntimeError(f"unhandled export format: {args.format!r}")
+                        if args.ranked:
+                            payload = incident_ranking(store)
+                        else:
+                            payload = summarize_failed_runs(store)
+                        sys.stdout.write(dumps_json(payload))
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled export command: {args.export_command!r}")
