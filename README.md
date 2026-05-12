@@ -221,9 +221,11 @@ This means `clean_orders` depends on `raw_orders`.
 
 **Phase 1** established a local workflow: metadata models, SQLite, JSON lineage loading, upstream/downstream/impact queries, and pytest coverage.
 
-**Phase 2** added pipeline runs (`load-runs`), run-aware downstream impact (`impact-run`), CLI **`--depth`** / **`--json`**, **`graph`** export, and an optional read-only HTTP API.
+**Phase 2** added pipeline runs (`load-runs`), run-aware downstream impact (`impact-run`), CLI **`--depth`** / **`--json`**, **`graph edges`** export, and an optional read-only HTTP API.
 
-**Phase 3** added operational incident triage: **`runs list`**, **`runs latest`**, **`incidents summarize`** / **`incidents rank`** (with blast-radius scoring), plus matching read-only API routes. The authoritative list of what exists today is under **Current Status** near the end of this README.
+**Phase 3** added operational incident triage: **`runs list`**, **`runs latest`**, **`incidents summarize`** / **`incidents rank`**, plus matching read-only API routes.
+
+**Phase 4 (metadata quality)** adds dataset/job catalog commands, optional catalog fields on datasets, metadata **`validate`** / **`doctor`**, directed **cycle detection**, JSON **export** of lineage and incidents, and **criticality-weighted** blast-radius scoring for incidents (see **Catalog and metadata quality** below). The authoritative shipped list remains under **Current Status**.
 
 ### Still out of scope
 
@@ -337,6 +339,7 @@ LineageHub/
     ├── conftest.py
     ├── test_store.py
     ├── test_graph.py
+    ├── test_graph_cycles.py
     ├── test_loader.py
     ├── test_cli_json.py
     ├── test_formatters.py
@@ -344,6 +347,15 @@ LineageHub/
     ├── test_impact_run.py
     ├── test_store_runs_list.py
     ├── test_cli_runs_list.py
+    ├── test_cli_datasets_list.py
+    ├── test_cli_datasets_show.py
+    ├── test_cli_jobs_list.py
+    ├── test_cli_jobs_show.py
+    ├── test_cli_validate.py
+    ├── test_cli_graph_cycles.py
+    ├── test_validation.py
+    ├── test_export_lineage.py
+    ├── test_export_incidents.py
     ├── test_analysis_summarize.py
     ├── test_cli_incidents_summarize.py
     ├── test_cli_incidents_rank.py
@@ -372,15 +384,14 @@ LineageHub/
 ### Phase 3 — Operational incident analysis
 
 - **`runs list`** / **`runs latest`** for recent and per-job run discovery
-- **`incidents summarize`** and **`incidents rank`** with blast-radius scoring
+- **`incidents summarize`** and **`incidents rank`** (blast radius; later **criticality-weighted** in Phase 4)
 - Read-only API: **`GET /runs`**, **`GET /jobs/{job}/runs/latest`**, **`GET /incidents/summary`**, **`GET /incidents/rank`**
 
-### Phase 4 — Integration layer
+### Phase 4 — Catalog, validation, and exports (shipped) + integration (planned)
 
-- Import metadata from existing ingestion pipelines
-- Connect with data quality alerts
-- Link pipeline failures with affected datasets
-- Support richer metadata from external systems (see [integration plan](docs/integration_plan.md))
+**Shipped:** **`datasets`** / **`jobs`** catalog CLI, optional dataset catalog fields, **`validate`** / **`doctor`**, **`graph cycles`**, **`export lineage`** / **`export incidents`**, criticality-weighted incident scoring.
+
+**Planned:** import metadata from ingestion pipelines, connect with data quality alerts, link failures with affected datasets, richer metadata from external systems (see [integration plan](docs/integration_plan.md))
 
 ### Phase 5 — Visualization and assistant UX
 
@@ -457,19 +468,14 @@ lineagehub incidents summarize
 lineagehub incidents summarize --limit 10 --json
 ```
 
-Rank incidents by blast radius (downstream affected dataset count):
+Rank incidents by weighted blast radius (see **Criticality-aware incident scoring** below):
 
 ```bash
 lineagehub incidents rank
 lineagehub incidents rank --limit 10 --json
 ```
 
-**Blast radius score** is the number of downstream datasets affected. **Severity** buckets are intentionally simple and explainable:
-
-- `0` → `none`
-- `1–2` → `low`
-- `3–5` → `medium`
-- `6+` → `high`
+**Blast radius score** is the **sum of criticality weights** over downstream datasets affected by each failed run (not a simple count). **Severity** is derived from that score (simple buckets for demos). **Affected dataset count** is still reported separately. Weights: `low`→1, `medium`→2, `high`→3, `critical`→5; missing or unknown criticality defaults to **2** (same as `medium`). Severity from score: `0`→`none`, `1–3`→`low`, `4–8`→`medium`, `9+`→`high`. Payloads include `scoring_method: criticality_weighted` and per-row `criticality` / `criticality_weight` under `affected_datasets`.
 
 For **upstream** and **downstream**, control whether to show only **immediate** neighbors or the **full transitive** closure:
 
@@ -535,6 +541,60 @@ PYTHONPATH=src python -m lineagehub load examples/sample_lineage.json
 
 ---
 
+## Catalog and metadata quality
+
+After loading **`examples/sample_lineage.json`** (datasets may include **owner**, **description**, **tags**, **criticality**, **system**), these commands support catalog hygiene, graph sanity checks, exports, and weighted incident scoring.
+
+### Dataset and Job Catalog
+
+List and inspect datasets and jobs (text or **`--json`**):
+
+```bash
+lineagehub datasets list
+lineagehub datasets list --json
+lineagehub datasets show sales_dashboard
+lineagehub datasets show sales_dashboard --json
+lineagehub jobs list
+lineagehub jobs list --json
+lineagehub jobs show clean_orders_job
+lineagehub jobs show clean_orders_job --json
+```
+
+### Metadata Validation
+
+Check structural issues (orphan references, duplicate external run ids, jobs without lineage I/O, isolated datasets, **directed cycles**) and emit **`pass`** / **`fail`** plus warnings:
+
+```bash
+lineagehub validate
+lineagehub validate --json
+lineagehub doctor
+```
+
+### Cycle Detection
+
+List directed cycles in stored lineage (names closed as `A → … → A`):
+
+```bash
+lineagehub graph cycles
+lineagehub graph cycles --json
+```
+
+### Exporting Metadata
+
+Dump the SQLite store as JSON for backups or demos (lineage shape is close to the loader format; **`lineage_edges`** is explicit). Incidents export reuses **`analysis.py`** payloads:
+
+```bash
+lineagehub export lineage --format json
+lineagehub export incidents
+lineagehub export incidents --ranked
+```
+
+### Criticality-aware incident scoring
+
+Incident summaries and rankings use **criticality-weighted** blast radius (see **Operational incident analysis** above for weights, severity bands, and JSON fields). Set **`criticality`** on datasets in lineage JSON (or via the store) so downstream impact reflects business importance, not only fan-out.
+
+---
+
 ## Technology Stack
 
 - Python 3.10+
@@ -568,7 +628,7 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI. Command-level workflows are summarized under **Catalog and metadata quality**.
 
 **Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
 
