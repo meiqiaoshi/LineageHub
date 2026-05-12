@@ -17,9 +17,9 @@ Loader
         ↓
 SQLite Metadata Store
         ↓
-Graph Query Layer
+Graph Query Layer  ←→  Metadata validation (read-only checks)
         ↓
-CLI / optional read-only HTTP API
+Structured JSON (output / analysis)  ←  CLI / optional read-only HTTP API
 ```
 
 ## Main Components
@@ -64,7 +64,8 @@ It supports:
 - upstream traversal
 - downstream traversal
 - impact analysis
-- simple graph display
+- simple graph display (text, Mermaid, DOT for edges)
+- directed **cycle detection** (`graph.find_cycles`) for `graph cycles` and validation warnings
 
 ### 4. CLI
 
@@ -80,6 +81,12 @@ lineagehub downstream raw_orders
 lineagehub impact raw_orders
 lineagehub impact-run run_001
 lineagehub graph edges mart_daily_sales
+lineagehub graph cycles
+lineagehub datasets list
+lineagehub jobs show clean_orders_job
+lineagehub validate
+lineagehub export lineage --format json
+lineagehub export incidents --ranked
 lineagehub runs list --status failed
 lineagehub runs latest --job clean_orders_job
 lineagehub incidents summarize --json
@@ -104,6 +111,16 @@ GET /runs/{run_id}/impact
 GET /incidents/summary
 GET /incidents/rank
 ```
+
+The **`GET /datasets`** response includes optional catalog fields when present (owner, description, tags, criticality, system), aligned with `dataset_catalog_row` in `output.py`.
+
+### 6. Metadata validation (`validation.py`)
+
+Read-only structural checks over SQLite: orphan foreign keys on edges or runs, duplicate `external_run_id` values, jobs with no lineage edges, isolated datasets, and directed cycles (cycles surface as **warnings** with code `lineage_cycle_detected`; orphan references are **errors**). The CLI exposes this as `lineagehub validate` / `lineagehub doctor` (`--json` matches the validation payload).
+
+### 7. Structured exports and catalog payloads (`output.py`)
+
+Machine-readable payloads shared by CLI `--json` and the API where applicable: upstream/downstream/impact, graph cycles, dataset catalog rows, full-store **`lineage_export_payload`** (datasets, jobs, edges, runs) for `export lineage`, and incident summaries/rankings produced in **`analysis.py`** for `export incidents` and incident routes.
 
 ---
 
@@ -136,16 +153,16 @@ lineagehub load
       ↓
 SQLite tables
       ↓
-lineagehub upstream / downstream / impact / graph
+lineagehub upstream / downstream / impact / graph (+ validate / export)
       ↓
 CLI text or JSON — or HTTP GET via optional API
 ```
 
 ---
 
-## Incident analysis flow (Phase 3)
+## Incident analysis flow (Phase 3–4)
 
-Phase 3 adds operational queries that start from *recent runs* instead of a known `run_id`.
+Phase 3 adds operational queries that start from *recent runs* instead of a known `run_id`. Phase 4 keeps the same pipeline but scores blast radius using **dataset `criticality`** on affected downstream nodes (weighted sum, not a raw count alone). See [metadata model](metadata_model.md) for weights and [README](../README.md) for severity buckets.
 
 ```text
 runs table
@@ -156,7 +173,7 @@ for each run: resolve job outputs (lineage_edges where job_id)
     ↓
 downstream traversal from outputs (graph.analyze_run_impact)
     ↓
-incident summary + blast radius scoring (analysis.py)
+incident summary + criticality-weighted blast radius (analysis.py)
     ↓
 CLI: incidents summarize / incidents rank
 API: GET /incidents/summary / GET /incidents/rank
@@ -166,10 +183,27 @@ Layering is kept explicit and reusable:
 
 ```text
 store.py  → runs listing + latest-run lookup
-graph.py  → lineage traversal + run-aware impact
-analysis.py → incident aggregation + scoring + ranking
+graph.py  → lineage traversal + run-aware impact + cycle detection
+validation.py → structural metadata checks (+ cycle warnings)
+analysis.py → incident aggregation + weighted scoring + ranking
+output.py → shared JSON shapes (lineage export, catalog, cycles, …)
 cli.py    → presentation (text) + JSON flags
 api.py    → read-only HTTP endpoints
+```
+
+---
+
+## Catalog and validation flow (Phase 4)
+
+```text
+SQLite store
+    ↓
+datasets / jobs catalog (store list + get) → output.dataset_catalog_row
+    ↓
+validate_metadata(store) → errors / warnings (cycles via graph.find_cycles)
+    ↓
+lineage_export_payload(store) → export lineage JSON
+summarize_failed_runs / incident_ranking → export incidents JSON
 ```
 
 ## Future Extensions
@@ -179,7 +213,7 @@ Potential future extensions include:
 - Importing pipeline run metadata from IngestFlow
 - Connecting data quality alerts from SentinelDQ
 - Adding natural-language query support through Orion Data Copilot
-- Exporting lineage data in OpenLineage-like event format
+- OpenLineage-style event streams (today: JSON snapshots via `export lineage` / `export incidents`)
 - Adding a simple graph visualization UI
 
 ---

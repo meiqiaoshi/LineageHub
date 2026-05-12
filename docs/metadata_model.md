@@ -30,6 +30,10 @@ Suggested fields:
 | type | Dataset type, such as table, file, mart, dashboard |
 | uri | Physical or logical location |
 | description | Optional description |
+| owner | Optional owning team or role |
+| tags | Optional list of string labels (lineage JSON); stored as JSON text in SQLite |
+| criticality | Optional business criticality: `low`, `medium`, `high`, or `critical` (loader rejects other values) |
+| system | Optional logical system label for the asset (lineage JSON key **`system`**) |
 | created_at | Metadata creation timestamp |
 | updated_at | Last metadata update timestamp |
 
@@ -39,13 +43,20 @@ Example:
 {
   "name": "raw_orders",
   "type": "table",
-  "uri": "duckdb://warehouse/raw_orders"
+  "uri": "duckdb://warehouse/raw_orders",
+  "owner": "ingestion-team",
+  "description": "Bronze-layer raw order events.",
+  "tags": ["bronze", "orders"],
+  "criticality": "low",
+  "system": "duckdb"
 }
 ```
 
 ### Implementation note (JSON, Python, SQLite)
 
 Lineage JSON uses the key **`type`** for dataset kind (see table above). In Python code the corresponding dataclass field is named **`dataset_type`** so it does not shadow the builtin `type`. The SQLite table column remains **`type`**, matching this document.
+
+Lineage JSON uses **`system`** on datasets for an optional catalog label. The SQLite column is named **`catalog_system`** so it does not collide with the job table’s **`system`** column when joining in SQL. The Python `Dataset` field is **`system`**; the store maps it to **`catalog_system`**.
 
 ---
 
@@ -139,6 +150,10 @@ CREATE TABLE IF NOT EXISTS datasets (
     type TEXT,
     uri TEXT,
     description TEXT,
+    owner TEXT,
+    tags_json TEXT,
+    criticality TEXT,
+    catalog_system TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -177,6 +192,15 @@ CREATE TABLE IF NOT EXISTS lineage_edges (
 );
 ```
 
+The live schema is created by `MetadataStore.init_schema()` in `src/lineagehub/store.py` (`SCHEMA_SQL` plus idempotent migrations). Older databases pick up new columns via `ALTER TABLE` for `runs.external_run_id` and the dataset catalog columns above.
+
+Partial unique index on runs (external ids must be unique when present):
+
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS idx_runs_external_run_id
+ON runs(external_run_id) WHERE external_run_id IS NOT NULL;
+```
+
 ---
 
 ## Graph Interpretation
@@ -186,6 +210,7 @@ LineageHub can interpret `lineage_edges` as a directed graph.
 - Upstream query: follow edges backward
 - Downstream query: follow edges forward
 - Impact analysis: follow downstream edges from a failed or stale dataset
+- **Cycles:** directed cycles are allowed in storage; `validation.py` reports them as warnings (`lineage_cycle_detected`), and `graph.find_cycles` powers `lineagehub graph cycles` for explicit listing
 
 Example graph:
 
@@ -200,6 +225,12 @@ clean_orders
 mart_daily_sales
 sales_dashboard
 ```
+
+---
+
+## Incident blast radius and `criticality` (Phase 4)
+
+When pipeline runs are loaded, failed runs can be summarized with a **criticality-weighted** blast radius: each affected downstream dataset contributes a weight derived from its stored **`criticality`** (`low`→1, `medium`→2, `high`→3, `critical`→5). Missing or unknown values use weight **2** (same as `medium`). The score is the **sum** of those weights; **`affected_count`** is still the number of distinct downstream datasets. Severity labels are simple buckets on that sum. Implementation: `src/lineagehub/analysis.py` (`summarize_failed_runs`, `incident_ranking`).
 
 ---
 
