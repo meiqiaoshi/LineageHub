@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from lineagehub.models import LineageResult, RunImpactAnalysis
+from lineagehub.store import MetadataStore
 
 
 def dumps_json(data: dict[str, Any]) -> str:
@@ -72,6 +73,77 @@ def dataset_catalog_row(
         "tags": list(tags) if tags is not None else None,
         "criticality": criticality,
         "system": system,
+    }
+
+
+def lineage_export_payload(store: MetadataStore) -> dict[str, Any]:
+    """Full-store lineage snapshot for backup or demos (JSON only for now)."""
+    id_to_name = {d.dataset_id: d.name for d in store.list_datasets() if d.dataset_id is not None}
+    job_id_to_name: dict[int, str] = {}
+    for jr in store.list_jobs():
+        job_id_to_name[jr.job_id] = jr.name
+
+    datasets: list[dict[str, Any]] = []
+    for d in sorted(store.list_datasets(), key=lambda x: x.name):
+        datasets.append(
+            dataset_catalog_row(
+                name=d.name,
+                dataset_type=d.dataset_type,
+                uri=d.uri,
+                owner=d.owner,
+                description=d.description,
+                tags=d.tags,
+                criticality=d.criticality,
+                system=d.system,
+            )
+        )
+
+    jobs: list[dict[str, Any]] = []
+    for jr in store.list_jobs():
+        jb = store.get_job_by_name(jr.name)
+        jobs.append(
+            {
+                "name": jr.name,
+                "system": jb.system if jb is not None else None,
+                "description": jr.description,
+                "inputs": store.list_input_dataset_names_for_job(jr.job_id),
+                "outputs": store.list_output_dataset_names_for_job(jr.job_id),
+            }
+        )
+
+    lineage_edges: list[dict[str, Any]] = []
+    for e in store.list_lineage_edges():
+        up = id_to_name.get(e.upstream_dataset_id)
+        down = id_to_name.get(e.downstream_dataset_id)
+        if up is None or down is None:
+            continue
+        jn = None
+        if e.job_id is not None:
+            jn = job_id_to_name.get(e.job_id)
+        lineage_edges.append({"upstream": up, "downstream": down, "job": jn})
+    lineage_edges.sort(key=lambda r: (r["upstream"], r["downstream"], r["job"] or ""))
+
+    runs: list[dict[str, Any]] = []
+    for r in store.list_runs():
+        rid = r.external_run_id if r.external_run_id is not None else str(r.internal_run_id)
+        runs.append(
+            {
+                "run_id": rid,
+                "job_name": r.job_name,
+                "status": r.status,
+                "started_at": r.started_at,
+                "ended_at": r.ended_at,
+                "error_message": r.error_message,
+            }
+        )
+    runs.sort(key=lambda x: (x.get("started_at") or "", x["run_id"]))
+
+    return {
+        "query_type": "lineage_export",
+        "datasets": datasets,
+        "jobs": jobs,
+        "lineage_edges": lineage_edges,
+        "runs": runs,
     }
 
 

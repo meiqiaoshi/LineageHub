@@ -129,6 +129,7 @@ After lineage is loaded, run records can be ingested and queried by external id:
 
 ```bash
 lineagehub load-runs examples/sample_runs.json
+lineagehub export lineage --format json
 lineagehub impact-run run_001
 ```
 
@@ -545,7 +546,7 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`export lineage --format json`** for full-store snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI.
 
 **Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
 

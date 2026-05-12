@@ -33,6 +33,7 @@ from lineagehub.output import (
     format_edges_text,
     graph_cycles_payload,
     impact_payload,
+    lineage_export_payload,
     run_impact_payload,
     upstream_payload,
 )
@@ -59,6 +60,19 @@ def main(argv: list[str] | None = None) -> int:
 
     p_load_runs = sub.add_parser("load-runs", help="Load pipeline run records from a JSON file")
     p_load_runs.add_argument("path", type=Path, help="Path to runs JSON")
+
+    p_export = sub.add_parser("export", help="Export stored metadata as JSON")
+    export_sub = p_export.add_subparsers(dest="export_command", required=True)
+    p_export_lineage = export_sub.add_parser(
+        "lineage",
+        help="Export datasets, jobs, lineage edges, and runs (loader-friendly shape)",
+    )
+    p_export_lineage.add_argument(
+        "--format",
+        choices=["json"],
+        default="json",
+        help="Output format (default: json)",
+    )
 
     p_datasets = sub.add_parser("datasets", help="Dataset catalog")
     datasets_sub = p_datasets.add_subparsers(dest="datasets_command", required=True)
@@ -201,6 +215,15 @@ def main(argv: list[str] | None = None) -> int:
                 load_runs_json(store, args.path)
                 print(f"Loaded runs from {args.path} into {db_path.resolve()}")
                 return 0
+            case "export":
+                match args.export_command:
+                    case "lineage":
+                        if args.format != "json":
+                            raise RuntimeError(f"unhandled export format: {args.format!r}")
+                        sys.stdout.write(dumps_json(lineage_export_payload(store)))
+                        return 0
+                    case _:
+                        raise RuntimeError(f"unhandled export command: {args.export_command!r}")
             case "datasets":
                 match args.datasets_command:
                     case "list":
