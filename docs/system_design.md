@@ -120,7 +120,7 @@ GET /incidents/summary
 GET /incidents/rank
 ```
 
-The **`GET /datasets`** response includes optional catalog fields when present (owner, description, tags, criticality, system), aligned with `dataset_catalog_row` in `output.py`. **`GET /datasets/{name}`** returns the same **`dataset_show`** payload as **`lineagehub datasets show --json`** (transitive upstream/downstream, producer/consumer jobs). **`GET /jobs`** and **`GET /jobs/{job_name}`** mirror **`jobs list --json`** and **`jobs show --json`**.
+**`GET /datasets`** returns the same **`datasets_list`** envelope as **`lineagehub datasets list --json`** (`query_type`, `count`, `datasets` with optional catalog fields). **`GET /datasets/{name}`** returns the same **`dataset_show`** payload as **`lineagehub datasets show --json`** (transitive upstream/downstream, producer/consumer jobs). **`GET /jobs`** and **`GET /jobs/{job_name}`** mirror **`jobs list --json`** and **`jobs show --json`**.
 
 ### 6. Metadata validation (`validation.py`)
 

@@ -17,8 +17,8 @@ from lineagehub.graph import (
     lineage_upstream_results,
 )
 from lineagehub.output import (
-    dataset_catalog_row,
     dataset_show_payload,
+    datasets_list_payload,
     downstream_payload,
     graph_cycles_payload,
     graph_edges_payload,
@@ -34,7 +34,7 @@ from lineagehub.validation import validate_metadata
 DepthQuery = Literal["direct", "all"]
 DirectionQuery = Literal["upstream", "downstream", "both"]
 
-app = FastAPI(title="LineageHub", version="0.2.0")
+app = FastAPI(title="LineageHub", version="0.3.0")
 
 
 def _store() -> MetadataStore:
@@ -109,21 +109,9 @@ def export_incidents(
 
 
 @app.get("/datasets")
-def list_datasets() -> list[dict[str, Any]]:
+def list_datasets() -> dict[str, Any]:
     store = _store()
-    return [
-        dataset_catalog_row(
-            name=d.name,
-            dataset_type=d.dataset_type,
-            uri=d.uri,
-            owner=d.owner,
-            description=d.description,
-            tags=d.tags,
-            criticality=d.criticality,
-            system=d.system,
-        )
-        for d in store.list_datasets()
-    ]
+    return datasets_list_payload(store.list_dataset_records())
 
 
 @app.get("/datasets/{name}")

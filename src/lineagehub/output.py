@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from lineagehub.models import LineageResult, RunImpactAnalysis
-from lineagehub.store import MetadataStore
+from lineagehub.store import DatasetRecord, MetadataStore
 
 
 def dumps_json(data: dict[str, Any]) -> str:
@@ -90,6 +90,27 @@ def dataset_catalog_row(
         "tags": list(tags) if tags is not None else None,
         "criticality": criticality,
         "system": system,
+    }
+
+
+def datasets_list_payload(records: list[DatasetRecord]) -> dict[str, Any]:
+    """Same envelope as ``lineagehub datasets list --json``."""
+    return {
+        "query_type": "datasets_list",
+        "count": len(records),
+        "datasets": [
+            dataset_catalog_row(
+                name=r.name,
+                dataset_type=r.dataset_type,
+                uri=r.uri,
+                owner=r.owner,
+                description=r.description,
+                tags=r.tags,
+                criticality=r.criticality,
+                system=r.system,
+            )
+            for r in records
+        ],
     }
 
 

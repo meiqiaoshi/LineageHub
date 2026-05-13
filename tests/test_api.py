@@ -135,9 +135,12 @@ def test_list_datasets(api_client) -> None:
     r = api_client.get("/datasets")
     assert r.status_code == 200
     body = r.json()
-    names = {row["name"] for row in body}
+    assert body["query_type"] == "datasets_list"
+    assert body["count"] == 4
+    rows = body["datasets"]
+    names = {row["name"] for row in rows}
     assert names == {"raw_orders", "clean_orders", "mart_daily_sales", "sales_dashboard"}
-    mart = next(x for x in body if x["name"] == "mart_daily_sales")
+    mart = next(x for x in rows if x["name"] == "mart_daily_sales")
     assert mart["owner"] == "analytics-engineering"
     assert mart["criticality"] == "high"
     assert mart["tags"] == ["gold", "finance", "aggregates"]
