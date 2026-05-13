@@ -83,6 +83,25 @@ def test_graph_cycles(api_client) -> None:
     assert body["cycles"] == []
 
 
+def test_graph_edges_downstream_all(api_client) -> None:
+    r = api_client.get("/graph/edges/raw_orders", params={"direction": "downstream", "depth": "all"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "graph_edges"
+    assert body["dataset"] == "raw_orders"
+    assert body["direction"] == "downstream"
+    assert body["depth"] == "all"
+    pairs = {(e["upstream"], e["downstream"]) for e in body["edges"]}
+    assert ("raw_orders", "clean_orders") in pairs
+    assert ("clean_orders", "mart_daily_sales") in pairs
+    assert ("mart_daily_sales", "sales_dashboard") in pairs
+
+
+def test_graph_edges_unknown_dataset(api_client) -> None:
+    r = api_client.get("/graph/edges/unknown_dataset_xyz")
+    assert r.status_code == 404
+
+
 def test_export_lineage(api_client) -> None:
     r = api_client.get("/export/lineage")
     assert r.status_code == 200

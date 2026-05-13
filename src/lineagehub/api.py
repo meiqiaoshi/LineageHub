@@ -10,6 +10,7 @@ from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.db_path import default_db_path
 from lineagehub.graph import (
     analyze_run_impact,
+    collect_graph_edges,
     find_cycles,
     lineage_downstream_results,
     lineage_impact_results,
@@ -20,6 +21,7 @@ from lineagehub.output import (
     dataset_show_payload,
     downstream_payload,
     graph_cycles_payload,
+    graph_edges_payload,
     impact_payload,
     job_show_payload,
     lineage_export_payload,
@@ -30,6 +32,7 @@ from lineagehub.store import MetadataStore, RunRecord
 from lineagehub.validation import validate_metadata
 
 DepthQuery = Literal["direct", "all"]
+DirectionQuery = Literal["upstream", "downstream", "both"]
 
 app = FastAPI(title="LineageHub", version="0.2.0")
 
@@ -64,6 +67,20 @@ def metadata_validation() -> dict[str, Any]:
 def graph_cycles() -> dict[str, Any]:
     store = _store()
     return graph_cycles_payload(find_cycles(store))
+
+
+@app.get("/graph/edges/{dataset_name}")
+def graph_edges_for_dataset(
+    dataset_name: str,
+    direction: DirectionQuery = Query("downstream", description="upstream | downstream | both"),
+    depth: DepthQuery = Query("all", description="direct: one hop from root; all: edges inside transitive closure"),
+) -> dict[str, Any]:
+    store = _store()
+    try:
+        edges = collect_graph_edges(store, dataset_name, direction=direction, depth=depth)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return graph_edges_payload(dataset_name, direction, depth, edges)
 
 
 @app.get("/export/lineage")

@@ -22,6 +22,23 @@ def graph_cycles_payload(cycles: list[list[str]]) -> dict[str, Any]:
     }
 
 
+def graph_edges_payload(
+    dataset: str,
+    direction: str,
+    depth: str,
+    edges: list[tuple[str, str]],
+) -> dict[str, Any]:
+    """Structured edge list for API / JSON (same tuples as ``collect_graph_edges``)."""
+    return {
+        "query_type": "graph_edges",
+        "dataset": dataset,
+        "direction": direction,
+        "depth": depth,
+        "edge_count": len(edges),
+        "edges": [{"upstream": u, "downstream": v} for u, v in edges],
+    }
+
+
 def upstream_payload(dataset: str, depth: str, items: list[LineageResult]) -> dict[str, Any]:
     return {
         "query_type": "upstream",
