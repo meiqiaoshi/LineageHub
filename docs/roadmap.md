@@ -93,7 +93,7 @@ Example questions:
 
 Goal: Expose lineage metadata through service endpoints and basic visualization.
 
-**Shipped (minimal):** read-only FastAPI app with JSON payloads aligned to the CLI, including dataset lineage endpoints, run queries, and incident analysis.
+**Shipped (minimal):** read-only FastAPI app with JSON payloads aligned to the CLI (lineage, runs, incidents, **catalog**, **validation**, **graph cycles**, **export** snapshots), including dataset lineage endpoints and matching **`GET /export/*`** where applicable.
 
 Remaining planned work:
 

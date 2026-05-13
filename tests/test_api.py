@@ -66,6 +66,52 @@ def test_health(api_client) -> None:
     assert r.json() == {"status": "ok"}
 
 
+def test_metadata_validation(api_client) -> None:
+    r = api_client.get("/validation")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "metadata_validation"
+    assert body["status"] == "pass"
+
+
+def test_graph_cycles(api_client) -> None:
+    r = api_client.get("/graph/cycles")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "graph_cycles"
+    assert body["cycle_count"] == 0
+    assert body["cycles"] == []
+
+
+def test_export_lineage(api_client) -> None:
+    r = api_client.get("/export/lineage")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "lineage_export"
+    assert {d["name"] for d in body["datasets"]} == {
+        "raw_orders",
+        "clean_orders",
+        "mart_daily_sales",
+        "sales_dashboard",
+    }
+
+
+def test_export_incidents(api_client) -> None:
+    r = api_client.get("/export/incidents")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "incident_summary"
+    assert body["incident_count"] == 2
+
+
+def test_export_incidents_ranked_limit(api_client) -> None:
+    r = api_client.get("/export/incidents", params={"ranked": "true", "limit": 1})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "incident_ranking"
+    assert len(body["incidents"]) == 1
+
+
 def test_list_datasets(api_client) -> None:
     r = api_client.get("/datasets")
     assert r.status_code == 200
@@ -154,7 +200,7 @@ def test_api_list_runs(api_client) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["query_type"] == "runs_list"
-    assert [row["run_id"] for row in body["runs"]] == ["run_002", "run_001"]
+    assert [row["run_id"] for row in body["runs"]] == ["run_003", "run_002", "run_001"]
 
 
 def test_api_list_runs_status_failed(api_client) -> None:
@@ -162,7 +208,7 @@ def test_api_list_runs_status_failed(api_client) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["filters"]["status"] == "failed"
-    assert [row["run_id"] for row in body["runs"]] == ["run_001"]
+    assert [row["run_id"] for row in body["runs"]] == ["run_003", "run_001"]
 
 
 def test_api_jobs_latest_run(api_client) -> None:

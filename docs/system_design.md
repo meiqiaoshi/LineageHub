@@ -101,6 +101,10 @@ Example endpoints:
 
 ```text
 GET /health
+GET /validation
+GET /graph/cycles
+GET /export/lineage
+GET /export/incidents
 GET /datasets
 GET /datasets/{name}
 GET /datasets/{name}/upstream
@@ -123,7 +127,7 @@ Read-only structural checks over SQLite: orphan foreign keys on edges or runs, d
 
 ### 7. Structured exports and catalog payloads (`output.py`)
 
-Machine-readable payloads shared by CLI `--json` and the API where applicable: upstream/downstream/impact, graph cycles, dataset catalog rows, full-store **`lineage_export_payload`** (datasets, jobs, edges, runs) for `export lineage`, and incident summaries/rankings produced in **`analysis.py`** for `export incidents` and incident routes.
+Machine-readable payloads shared by CLI `--json` and the API where applicable: upstream/downstream/impact, graph cycles, dataset catalog rows, full-store **`lineage_export_payload`** (datasets, jobs, edges, runs) for `export lineage`, **metadata validation** (`validate_metadata`), and incident summaries/rankings produced in **`analysis.py`** for `export incidents` and incident routes. HTTP **`GET /validation`**, **`GET /graph/cycles`**, **`GET /export/lineage`**, and **`GET /export/incidents`** mirror the corresponding CLI JSON.
 
 ---
 

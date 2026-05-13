@@ -328,6 +328,7 @@ LineageHub/
 │   └── lineagehub/
 │       ├── __init__.py
 │       ├── cli.py
+│       ├── db_path.py
 │       ├── models.py
 │       ├── store.py
 │       ├── loader.py
@@ -418,7 +419,7 @@ pip install -e ".[api]"
 LINEAGEHUB_DB=./lineagehub.db uvicorn lineagehub.api:app --reload
 ```
 
-Example endpoints (response JSON matches CLI `--json` payloads where noted): `GET /health`, `GET /datasets`, `GET /datasets/{name}` (dataset catalog + graph context), `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`, `GET /incidents/summary`, `GET /incidents/rank`.
+Example endpoints (response JSON matches CLI `--json` payloads where noted): `GET /health`, `GET /validation`, `GET /graph/cycles`, `GET /export/lineage`, `GET /export/incidents` (optional `ranked=true`, `limit`, `status`, `since`), `GET /datasets`, `GET /datasets/{name}` (dataset catalog + graph context), `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`, `GET /incidents/summary`, `GET /incidents/rank`.
 
 Load the sample lineage file into the default SQLite database (`./lineagehub.db`, unless overridden):
 
@@ -628,7 +629,7 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI (including **`GET /datasets/{name}`**, **`GET /jobs`**, **`GET /jobs/{job_name}`** for catalog parity). Command-level workflows are summarized under **Catalog and metadata quality**.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI (including catalog routes, **`GET /validation`**, **`GET /graph/cycles`**, and **`GET /export/*`**). Command-level workflows are summarized under **Catalog and metadata quality**.
 
 **Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
 

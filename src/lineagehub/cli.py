@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
+from lineagehub.db_path import default_db_path
 from lineagehub.graph import (
     analyze_run_impact,
     collect_graph_edges,
@@ -39,10 +39,6 @@ from lineagehub.output import (
 )
 from lineagehub.store import MetadataStore, RunRecord
 from lineagehub.validation import validate_metadata
-
-
-def default_db_path() -> str:
-    return os.environ.get("LINEAGEHUB_DB", "lineagehub.db")
 
 
 def main(argv: list[str] | None = None) -> int:
