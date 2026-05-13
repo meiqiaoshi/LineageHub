@@ -97,6 +97,49 @@ def test_unknown_dataset_404(api_client) -> None:
     assert r.status_code == 404
 
 
+def test_dataset_detail(api_client) -> None:
+    r = api_client.get("/datasets/mart_daily_sales")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "dataset_show"
+    assert body["dataset"]["name"] == "mart_daily_sales"
+    assert body["dataset"]["criticality"] == "high"
+    assert [d["name"] for d in body["upstream"]] == ["clean_orders", "raw_orders"]
+    assert [d["name"] for d in body["downstream"]] == ["sales_dashboard"]
+    assert "daily_sales_job" in body["producer_jobs"]
+
+
+def test_dataset_detail_unknown(api_client) -> None:
+    r = api_client.get("/datasets/unknown_dataset_xyz")
+    assert r.status_code == 404
+
+
+def test_jobs_list(api_client) -> None:
+    r = api_client.get("/jobs")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "jobs_list"
+    names = {j["name"] for j in body["jobs"]}
+    assert names == {"clean_orders_job", "daily_sales_job", "sales_dashboard_refresh"}
+
+
+def test_job_detail(api_client) -> None:
+    r = api_client.get("/jobs/clean_orders_job")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "job_show"
+    assert body["job"]["name"] == "clean_orders_job"
+    assert body["inputs"] == ["raw_orders"]
+    assert body["outputs"] == ["clean_orders"]
+    assert body["run_count"] == 1
+    assert body["latest_run"] == {"run_id": "run_001", "status": "failed"}
+
+
+def test_job_detail_unknown(api_client) -> None:
+    r = api_client.get("/jobs/nonexistent_job_xyz")
+    assert r.status_code == 404
+
+
 def test_run_impact(api_client) -> None:
     r = api_client.get("/runs/run_001/impact")
     assert r.status_code == 200

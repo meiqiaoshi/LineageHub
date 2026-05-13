@@ -102,9 +102,12 @@ Example endpoints:
 ```text
 GET /health
 GET /datasets
+GET /datasets/{name}
 GET /datasets/{name}/upstream
 GET /datasets/{name}/downstream
 GET /datasets/{name}/impact
+GET /jobs
+GET /jobs/{job_name}
 GET /runs
 GET /jobs/{job_name}/runs/latest
 GET /runs/{run_id}/impact
@@ -112,7 +115,7 @@ GET /incidents/summary
 GET /incidents/rank
 ```
 
-The **`GET /datasets`** response includes optional catalog fields when present (owner, description, tags, criticality, system), aligned with `dataset_catalog_row` in `output.py`.
+The **`GET /datasets`** response includes optional catalog fields when present (owner, description, tags, criticality, system), aligned with `dataset_catalog_row` in `output.py`. **`GET /datasets/{name}`** returns the same **`dataset_show`** payload as **`lineagehub datasets show --json`** (transitive upstream/downstream, producer/consumer jobs). **`GET /jobs`** and **`GET /jobs/{job_name}`** mirror **`jobs list --json`** and **`jobs show --json`**.
 
 ### 6. Metadata validation (`validation.py`)
 

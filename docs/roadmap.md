@@ -61,10 +61,9 @@ Delivered in code:
 - Incident summaries over failed runs (`incidents summarize`) with downstream impact expansion
 - Blast radius scoring and severity bucketing, plus ranking (`incidents rank`)
 - Optional API endpoints for operational queries:
-  - `GET /runs`
-  - `GET /jobs/{job_name}/runs/latest`
-  - `GET /incidents/summary`
-  - `GET /incidents/rank`
+  - `GET /datasets`, `GET /datasets/{name}` (catalog + lineage context), `GET /datasets/{name}/upstream|downstream|impact`
+  - `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`
+  - `GET /incidents/summary`, `GET /incidents/rank`
 
 Future phases can add cross-system connectors; see [integration_plan.md](integration_plan.md).
 

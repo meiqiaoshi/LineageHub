@@ -16,8 +16,10 @@ from lineagehub.graph import (
 )
 from lineagehub.output import (
     dataset_catalog_row,
+    dataset_show_payload,
     downstream_payload,
     impact_payload,
+    job_show_payload,
     run_impact_payload,
     upstream_payload,
 )
@@ -64,6 +66,32 @@ def list_datasets() -> list[dict[str, Any]]:
         )
         for d in store.list_datasets()
     ]
+
+
+@app.get("/datasets/{name}")
+def dataset_detail(name: str) -> dict[str, Any]:
+    store = _store()
+    ds = store.get_dataset_by_name(name)
+    if ds is None or ds.dataset_id is None:
+        raise HTTPException(status_code=404, detail=f"Unknown dataset: {name!r}")
+    upstream_items = lineage_upstream_results(store, name, depth="all")
+    downstream_items = lineage_downstream_results(store, name, depth="all")
+    producers = store.list_job_names_producing_dataset(ds.dataset_id)
+    consumers = store.list_job_names_consuming_dataset(ds.dataset_id)
+    return dataset_show_payload(
+        name=name,
+        dataset_type=ds.dataset_type,
+        uri=ds.uri,
+        producer_jobs=producers,
+        consumer_jobs=consumers,
+        upstream=upstream_items,
+        downstream=downstream_items,
+        owner=ds.owner,
+        description=ds.description,
+        tags=ds.tags,
+        criticality=ds.criticality,
+        system=ds.system,
+    )
 
 
 @app.get("/datasets/{name}/upstream")
@@ -144,6 +172,41 @@ def list_runs(
         },
         "runs": [_run_record_public_dict(r) for r in rows],
     }
+
+
+@app.get("/jobs")
+def list_jobs() -> dict[str, Any]:
+    store = _store()
+    rows = store.list_jobs()
+    return {
+        "query_type": "jobs_list",
+        "count": len(rows),
+        "jobs": [{"name": r.name, "description": r.description} for r in rows],
+    }
+
+
+@app.get("/jobs/{job_name}")
+def job_detail(job_name: str) -> dict[str, Any]:
+    store = _store()
+    job = store.get_job_by_name(job_name)
+    if job is None or job.job_id is None:
+        raise HTTPException(status_code=404, detail=f"Unknown job: {job_name!r}")
+    inputs = store.list_input_dataset_names_for_job(job.job_id)
+    outputs = store.list_output_dataset_names_for_job(job.job_id)
+    latest = store.get_latest_run(job_name)
+    run_count = store.count_runs_for_job(job.job_id)
+    latest_json = None
+    if latest is not None:
+        rid = latest.external_run_id if latest.external_run_id is not None else str(latest.internal_run_id)
+        latest_json = {"run_id": rid, "status": latest.status}
+    return job_show_payload(
+        name=job.name,
+        description=job.description,
+        inputs=inputs,
+        outputs=outputs,
+        latest_run=latest_json,
+        run_count=run_count,
+    )
 
 
 @app.get("/jobs/{job_name}/runs/latest")
