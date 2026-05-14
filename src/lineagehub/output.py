@@ -198,10 +198,25 @@ def lineage_export_payload(store: MetadataStore) -> dict[str, Any]:
     }
 
 
+def job_catalog_row(
+    *,
+    name: str,
+    description: str | None,
+    system: str | None,
+) -> dict[str, Any]:
+    """One job in ``jobs list --json`` and ``GET /jobs``."""
+    return {
+        "name": name,
+        "description": description,
+        "system": system,
+    }
+
+
 def job_show_payload(
     *,
     name: str,
     description: str | None,
+    system: str | None,
     inputs: list[str],
     outputs: list[str],
     latest_run: dict[str, Any] | None,
@@ -209,7 +224,7 @@ def job_show_payload(
 ) -> dict[str, Any]:
     return {
         "query_type": "job_show",
-        "job": {"name": name, "description": description},
+        "job": job_catalog_row(name=name, description=description, system=system),
         "inputs": inputs,
         "outputs": outputs,
         "latest_run": latest_run,

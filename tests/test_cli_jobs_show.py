@@ -25,6 +25,7 @@ def test_jobs_show_json_with_latest_run(tmp_path: Path, capsys: pytest.CaptureFi
     payload = json.loads(capsys.readouterr().out)
     assert payload["query_type"] == "job_show"
     assert payload["job"]["name"] == "clean_orders_job"
+    assert payload["job"]["system"] is None
     assert payload["inputs"] == ["raw_orders"]
     assert payload["outputs"] == ["clean_orders"]
     assert payload["latest_run"] == {
@@ -66,6 +67,7 @@ def test_jobs_show_text_latest(tmp_path: Path, capsys: pytest.CaptureFixture[str
     assert main(["--db", str(db), "jobs", "show", "clean_orders_job"]) == 0
     out = capsys.readouterr().out
     assert "Job: clean_orders_job" in out
+    assert "System:" in out
     assert "Latest run:" in out
     assert "run_004" in out
     assert "Recent runs: 2" in out

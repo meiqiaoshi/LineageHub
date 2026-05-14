@@ -23,6 +23,7 @@ def test_jobs_list_text(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
     assert "Jobs:" in out
     assert "- clean_orders_job" in out
     assert "Description: (none)" in out
+    assert "System: (none)" in out
 
 
 def test_jobs_list_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -37,6 +38,8 @@ def test_jobs_list_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> N
     assert names == {"clean_orders_job", "daily_sales_job", "sales_dashboard_refresh"}
     for j in payload["jobs"]:
         assert "description" in j
+        assert "system" in j
+        assert j["system"] is None
 
 
 def test_jobs_list_empty(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

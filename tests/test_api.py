@@ -189,6 +189,8 @@ def test_jobs_list(api_client) -> None:
     assert body["query_type"] == "jobs_list"
     names = {j["name"] for j in body["jobs"]}
     assert names == {"clean_orders_job", "daily_sales_job", "sales_dashboard_refresh"}
+    for j in body["jobs"]:
+        assert j["system"] is None
 
 
 def test_job_detail(api_client) -> None:
@@ -197,6 +199,7 @@ def test_job_detail(api_client) -> None:
     body = r.json()
     assert body["query_type"] == "job_show"
     assert body["job"]["name"] == "clean_orders_job"
+    assert body["job"]["system"] is None
     assert body["inputs"] == ["raw_orders"]
     assert body["outputs"] == ["clean_orders"]
     assert body["run_count"] == 1

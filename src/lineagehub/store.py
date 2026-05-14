@@ -115,6 +115,7 @@ class JobRecord:
     job_id: int
     name: str
     description: str | None
+    system: str | None = None
 
 
 def _apply_runs_migrations(conn: sqlite3.Connection) -> None:
@@ -484,13 +485,14 @@ class MetadataStore:
         conn = self.connect()
         try:
             rows = conn.execute(
-                "SELECT job_id, name, description FROM jobs ORDER BY name"
+                "SELECT job_id, name, description, system FROM jobs ORDER BY name"
             ).fetchall()
             return [
                 JobRecord(
                     job_id=int(r["job_id"]),
                     name=str(r["name"]),
                     description=r["description"],
+                    system=r["system"],
                 )
                 for r in rows
             ]

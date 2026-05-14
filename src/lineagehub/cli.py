@@ -26,6 +26,7 @@ from lineagehub.output import (
     dataset_catalog_row,
     dataset_show_payload,
     downstream_payload,
+    job_catalog_row,
     job_show_payload,
     dumps_json,
     format_edges_dot,
@@ -345,7 +346,9 @@ def main(argv: list[str] | None = None) -> int:
                                 "query_type": "jobs_list",
                                 "count": len(rows),
                                 "jobs": [
-                                    {"name": r.name, "description": r.description}
+                                    job_catalog_row(
+                                        name=r.name, description=r.description, system=r.system
+                                    )
                                     for r in rows
                                 ],
                             }
@@ -359,7 +362,9 @@ def main(argv: list[str] | None = None) -> int:
                         for r in rows:
                             print(f"- {r.name}")
                             d = r.description if r.description is not None else "(none)"
+                            sy = r.system if r.system is not None else "(none)"
                             print(f"  Description: {d}")
+                            print(f"  System: {sy}")
                             print()
                         return 0
                     case "show":
@@ -377,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
                                     job_show_payload(
                                         name=job.name,
                                         description=job.description,
+                                        system=job.system,
                                         inputs=inputs,
                                         outputs=outputs,
                                         latest_run=latest_json,
@@ -388,6 +394,7 @@ def main(argv: list[str] | None = None) -> int:
                         _print_job_show(
                             name=job.name,
                             description=job.description,
+                            system=job.system,
                             inputs=inputs,
                             outputs=outputs,
                             latest=latest,
@@ -669,12 +676,15 @@ def _print_job_show(
     *,
     name: str,
     description: str | None,
+    system: str | None,
     inputs: list[str],
     outputs: list[str],
     latest: RunRecord | None,
     run_count: int,
 ) -> None:
     print(f"Job: {name}")
+    sy = system if system is not None else "(none)"
+    print(f"System: {sy}")
     if description is not None:
         print()
         print("Description:")

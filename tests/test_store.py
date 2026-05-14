@@ -94,7 +94,17 @@ def test_list_jobs_sorted_by_name(empty_store: MetadataStore) -> None:
     assert [r.name for r in rows] == ["alpha_job", "zebra_job"]
     assert isinstance(rows[0], JobRecord)
     assert rows[0].description == "first"
+    assert rows[0].system is None
     assert rows[1].job_id >= 1
+
+
+def test_list_jobs_includes_system(empty_store: MetadataStore) -> None:
+    empty_store.upsert_job(Job(name="airflow_job", system="airflow", description="d"))
+    rows = empty_store.list_jobs()
+    assert len(rows) == 1
+    assert rows[0].name == "airflow_job"
+    assert rows[0].system == "airflow"
+    assert rows[0].description == "d"
 
 
 def test_job_names_producing_and_consuming_dataset(empty_store: MetadataStore) -> None:
