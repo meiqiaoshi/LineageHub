@@ -86,7 +86,8 @@ lineagehub datasets list
 lineagehub jobs show clean_orders_job
 lineagehub validate
 lineagehub export lineage --format json
-lineagehub export incidents --ranked
+lineagehub export incidents --limit 10
+lineagehub export incidents --ranked --limit 5
 lineagehub runs list --status failed
 lineagehub runs latest --job clean_orders_job
 lineagehub incidents summarize --json

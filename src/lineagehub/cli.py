@@ -82,6 +82,20 @@ def main(argv: list[str] | None = None) -> int:
         help="Emit incident_ranking instead of incident_summary",
     )
     p_export_incidents.add_argument(
+        "--status",
+        default="failed",
+        help="Run status filter (default: failed)",
+    )
+    p_export_incidents.add_argument(
+        "--since",
+        help="Only include runs with started_at >= SINCE (ISO-8601 string)",
+    )
+    p_export_incidents.add_argument(
+        "--limit",
+        type=int,
+        help="Summary: max runs evaluated; ranked: max incidents returned",
+    )
+    p_export_incidents.add_argument(
         "--format",
         choices=["json"],
         default="json",
@@ -240,9 +254,20 @@ def main(argv: list[str] | None = None) -> int:
                         if args.format != "json":
                             raise RuntimeError(f"unhandled export format: {args.format!r}")
                         if args.ranked:
-                            payload = incident_ranking(store)
+                            payload = incident_ranking(
+                                store,
+                                status=args.status,
+                                since=args.since,
+                                limit_runs=None,
+                                limit_ranked=args.limit,
+                            )
                         else:
-                            payload = summarize_failed_runs(store)
+                            payload = summarize_failed_runs(
+                                store,
+                                status=args.status,
+                                since=args.since,
+                                limit=args.limit,
+                            )
                         sys.stdout.write(dumps_json(payload))
                         return 0
                     case _:

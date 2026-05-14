@@ -132,6 +132,7 @@ lineagehub load-runs examples/sample_runs.json
 lineagehub export lineage --format json
 lineagehub export incidents
 lineagehub export incidents --ranked
+lineagehub export incidents --limit 10
 lineagehub impact-run run_001
 ```
 
@@ -582,12 +583,15 @@ lineagehub graph cycles --json
 
 ### Exporting Metadata
 
-Dump the SQLite store as JSON for backups or demos (lineage shape is close to the loader format; **`lineage_edges`** is explicit). Incidents export reuses **`analysis.py`** payloads:
+Dump the SQLite store as JSON for backups or demos (lineage shape is close to the loader format; **`lineage_edges`** is explicit). Incidents export reuses **`analysis.py`** payloads (optional **`--status`**, **`--since`**, **`--limit`**: for summary, caps runs evaluated; for **`--ranked`**, caps ranked rows—same semantics as **`incidents summarize`** / **`incidents rank`**):
 
 ```bash
 lineagehub export lineage --format json
 lineagehub export incidents
 lineagehub export incidents --ranked
+lineagehub export incidents --limit 10
+lineagehub export incidents --ranked --limit 5
+lineagehub export incidents --since 2026-05-01T00:00:00Z --status failed
 ```
 
 ### Criticality-aware incident scoring
