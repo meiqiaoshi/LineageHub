@@ -125,3 +125,33 @@ def test_incidents_rank_limit(tmp_path: Path, capsys: pytest.CaptureFixture[str]
     payload = json.loads(capsys.readouterr().out)
     assert len(payload["incidents"]) == 2
 
+
+def test_incidents_rank_limit_runs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    db = _seed_lineage_and_runs(
+        tmp_path,
+        [
+            {
+                "run_id": "run_leaf",
+                "job_name": "sales_dashboard_refresh",
+                "status": "failed",
+                "started_at": "2026-05-01T11:00:00Z",
+            },
+            {
+                "run_id": "run_mid",
+                "job_name": "daily_sales_job",
+                "status": "failed",
+                "started_at": "2026-05-01T10:00:00Z",
+            },
+            {
+                "run_id": "run_big",
+                "job_name": "clean_orders_job",
+                "status": "failed",
+                "started_at": "2026-05-01T09:00:00Z",
+            },
+        ],
+    )
+    assert main(["--db", str(db), "incidents", "rank", "--limit-runs", "1", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert len(payload["incidents"]) == 1
+    assert payload["incidents"][0]["run_id"] == "run_leaf"
+

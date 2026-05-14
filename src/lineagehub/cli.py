@@ -97,6 +97,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Summary: max runs evaluated; ranked: max incidents returned",
     )
     p_export_incidents.add_argument(
+        "--limit-runs",
+        type=int,
+        dest="limit_runs",
+        help="Ranked only: max failed runs evaluated before ranking",
+    )
+    p_export_incidents.add_argument(
         "--format",
         choices=["json"],
         default="json",
@@ -232,6 +238,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Only include runs with started_at >= SINCE (ISO-8601 string)",
     )
     p_inc_rank.add_argument("--limit", type=int, help="Max number of incidents to return")
+    p_inc_rank.add_argument(
+        "--limit-runs",
+        type=int,
+        dest="limit_runs",
+        help="Max failed runs evaluated before ranking (feeds summarize step)",
+    )
     p_inc_rank.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_validate = sub.add_parser("validate", help="Validate metadata health (datasets, jobs, runs, lineage)")
@@ -269,7 +281,7 @@ def main(argv: list[str] | None = None) -> int:
                                 store,
                                 status=args.status,
                                 since=args.since,
-                                limit_runs=None,
+                                limit_runs=args.limit_runs,
                                 limit_ranked=args.limit,
                             )
                         else:
@@ -556,7 +568,7 @@ def main(argv: list[str] | None = None) -> int:
                             store,
                             status=args.status,
                             since=args.since,
-                            limit_runs=None,
+                            limit_runs=args.limit_runs,
                             limit_ranked=args.limit,
                         )
                         ranked = payload["incidents"]

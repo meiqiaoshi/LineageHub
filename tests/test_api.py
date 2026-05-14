@@ -322,3 +322,21 @@ def test_api_incidents_rank_limit(api_client) -> None:
     body = r.json()
     assert len(body["incidents"]) == 1
     assert body["incidents"][0]["run_id"] == "run_001"
+
+
+def test_api_incidents_rank_limit_runs(api_client) -> None:
+    r = api_client.get("/incidents/rank", params={"limit_runs": 1})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "incident_ranking"
+    assert len(body["incidents"]) == 1
+    assert body["incidents"][0]["run_id"] == "run_003"
+
+
+def test_export_incidents_ranked_limit_runs(api_client) -> None:
+    r = api_client.get("/export/incidents", params={"ranked": "true", "limit_runs": 1})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "incident_ranking"
+    assert len(body["incidents"]) == 1
+    assert body["incidents"][0]["run_id"] == "run_003"

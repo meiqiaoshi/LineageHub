@@ -420,7 +420,7 @@ pip install -e ".[api]"
 LINEAGEHUB_DB=./lineagehub.db uvicorn lineagehub.api:app --reload
 ```
 
-Example endpoints (response JSON matches CLI `--json` payloads where noted): `GET /health`, `GET /validation`, `GET /graph/cycles`, `GET /graph/edges/{dataset}?direction=downstream&depth=all`, `GET /export/lineage`, `GET /export/incidents` (optional `ranked=true`, `limit`, `status`, `since`), `GET /datasets` (same **`datasets_list`** envelope as **`datasets list --json`**), `GET /datasets/{name}` (same **`dataset_show`** as **`datasets show --json`**), `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /runs/{run_id}` (same **`run_show`** as **`runs show --json`**), `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`, `GET /incidents/summary`, `GET /incidents/rank`.
+Example endpoints (response JSON matches CLI `--json` payloads where noted): `GET /health`, `GET /validation`, `GET /graph/cycles`, `GET /graph/edges/{dataset}?direction=downstream&depth=all`, `GET /export/lineage`, `GET /export/incidents` (optional `ranked=true`, `limit`, `limit_runs` when ranked, `status`, `since`), `GET /datasets` (same **`datasets_list`** envelope as **`datasets list --json`**), `GET /datasets/{name}` (same **`dataset_show`** as **`datasets show --json`**), `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /runs/{run_id}` (same **`run_show`** as **`runs show --json`**), `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`, `GET /incidents/summary`, `GET /incidents/rank` (optional `limit`, `limit_runs`).
 
 Load the sample lineage file into the default SQLite database (`./lineagehub.db`, unless overridden):
 
@@ -477,7 +477,10 @@ Rank incidents by weighted blast radius (see **Criticality-aware incident scorin
 ```bash
 lineagehub incidents rank
 lineagehub incidents rank --limit 10 --json
+lineagehub incidents rank --limit-runs 50 --limit 10 --json
 ```
+
+`--limit-runs` caps how many failed runs (most recent first) are scored before sorting; `--limit` caps how many ranked rows are returned.
 
 **Blast radius score** is the **sum of criticality weights** over downstream datasets affected by each failed run (not a simple count). **Severity** is derived from that score (simple buckets for demos). **Affected dataset count** is still reported separately. Weights: `low`→1, `medium`→2, `high`→3, `critical`→5; missing or unknown criticality defaults to **2** (same as `medium`). Severity from score: `0`→`none`, `1–3`→`low`, `4–8`→`medium`, `9+`→`high`. Payloads include `scoring_method: criticality_weighted` and per-row `criticality` / `criticality_weight` under `affected_datasets`.
 
@@ -585,7 +588,7 @@ lineagehub graph cycles --json
 
 ### Exporting Metadata
 
-Dump the SQLite store as JSON for backups or demos (lineage shape is close to the loader format; **`lineage_edges`** is explicit). Incidents export reuses **`analysis.py`** payloads (optional **`--status`**, **`--since`**, **`--limit`**: for summary, caps runs evaluated; for **`--ranked`**, caps ranked rows—same semantics as **`incidents summarize`** / **`incidents rank`**):
+Dump the SQLite store as JSON for backups or demos (lineage shape is close to the loader format; **`lineage_edges`** is explicit). Incidents export reuses **`analysis.py`** payloads (optional **`--status`**, **`--since`**, **`--limit`**: for summary, caps runs evaluated; for **`--ranked`**, **`--limit`** caps ranked rows after sort, and **`--limit-runs`** caps runs fed into scoring—same semantics as **`incidents summarize`** / **`incidents rank`**):
 
 ```bash
 lineagehub export lineage --format json
@@ -593,6 +596,7 @@ lineagehub export incidents
 lineagehub export incidents --ranked
 lineagehub export incidents --limit 10
 lineagehub export incidents --ranked --limit 5
+lineagehub export incidents --ranked --limit-runs 100 --limit 10
 lineagehub export incidents --since 2026-05-01T00:00:00Z --status failed
 ```
 

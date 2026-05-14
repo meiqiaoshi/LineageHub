@@ -131,6 +131,41 @@ def test_export_incidents_ranked_respects_limit(tmp_path: Path, capsys: pytest.C
     assert len(payload["incidents"]) == 1
 
 
+def test_export_incidents_ranked_respects_limit_runs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    main = _main()
+    db = tmp_path / "exp_inc_lr.db"
+    store = MetadataStore(db)
+    load_lineage_json(store, _SAMPLE_LINEAGE)
+    runs_path = tmp_path / "runs_lr.json"
+    runs_path.write_text(
+        json.dumps(
+            {
+                "runs": [
+                    {
+                        "run_id": "run_a",
+                        "job_name": "clean_orders_job",
+                        "status": "failed",
+                        "started_at": "2026-05-01T09:00:00Z",
+                    },
+                    {
+                        "run_id": "run_b",
+                        "job_name": "daily_sales_job",
+                        "status": "failed",
+                        "started_at": "2026-05-02T10:00:00Z",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    load_runs_json(store, runs_path)
+    assert main(["--db", str(db), "export", "incidents", "--ranked", "--limit-runs", "1"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == incident_ranking(MetadataStore(db), limit_runs=1)
+    assert len(payload["incidents"]) == 1
+    assert payload["incidents"][0]["run_id"] == "run_b"
+
+
 def test_export_incidents_empty(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     main = _main()
     db = tmp_path / "empty_inc.db"

@@ -87,6 +87,11 @@ def export_incidents(
     status: str = Query("failed", description="Run status filter"),
     since: Optional[str] = Query(None, description="Only runs with started_at >= since"),
     limit: Optional[int] = Query(None, ge=1, description="For summary: max runs evaluated; for ranked: max ranked rows"),
+    limit_runs: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Ranked only: max failed runs evaluated before ranking (ignored for summary)",
+    ),
 ) -> dict[str, Any]:
     store = _store()
     if ranked:
@@ -94,7 +99,7 @@ def export_incidents(
             store,
             status=status,
             since=since,
-            limit_runs=None,
+            limit_runs=limit_runs,
             limit_ranked=limit,
         )
     return summarize_failed_runs(store, status=status, since=since, limit=limit)
@@ -180,13 +185,18 @@ def incidents_rank(
     status: str = Query("failed", description="Run status filter"),
     since: Optional[str] = Query(None, description="Only runs with started_at >= since"),
     limit: Optional[int] = Query(None, ge=1, description="Max ranked incidents returned"),
+    limit_runs: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Max failed runs evaluated before ranking (feeds summarize step)",
+    ),
 ) -> dict[str, Any]:
     store = _store()
     return incident_ranking(
         store,
         status=status,
         since=since,
-        limit_runs=None,
+        limit_runs=limit_runs,
         limit_ranked=limit,
     )
 
