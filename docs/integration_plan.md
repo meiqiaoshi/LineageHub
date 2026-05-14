@@ -31,7 +31,7 @@ LineageHub holds **dataset–job–run** metadata and answers graph questions (u
   - catalog: `/datasets`, `/datasets/{name}`, `/jobs`, `/jobs/{job_name}`
   - metadata quality: `/validation`, `/graph/cycles`, `/graph/edges/{dataset}`, `/export/lineage`, `/export/incidents`
   - lineage queries: `/datasets/.../upstream`, `/downstream`, `/impact`
-  - run queries: `/runs`, `/jobs/{job_name}/runs/latest`, `/runs/{run_id}/impact`
+  - run queries: `/runs`, `/runs/{run_id}`, `/jobs/{job_name}/runs/latest`, `/runs/{run_id}/impact`
   - incident triage: `/incidents/summary`, `/incidents/rank`
 - Responses stay structured JSON so Orion can summarize without re-implementing graph logic.
 

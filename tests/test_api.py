@@ -227,6 +227,26 @@ def test_run_impact(api_client) -> None:
     assert body["affected_count"] == 2
 
 
+def test_run_detail(api_client) -> None:
+    r = api_client.get("/runs/run_001")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query_type"] == "run_show"
+    assert body["run"]["run_id"] == "run_001"
+    assert body["run"]["job_name"] == "clean_orders_job"
+    assert body["run"]["error_message"] == "Source dataset raw_orders was stale"
+
+
+def test_run_detail_internal_id(api_client) -> None:
+    r = api_client.get("/runs/1")
+    assert r.status_code == 200
+    assert r.json()["run"]["run_id"] == "run_001"
+
+
+def test_run_detail_unknown(api_client) -> None:
+    assert api_client.get("/runs/nonexistent_run_xyz").status_code == 404
+
+
 def test_api_list_runs(api_client) -> None:
     r = api_client.get("/runs")
     assert r.status_code == 200

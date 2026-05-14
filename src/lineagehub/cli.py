@@ -37,6 +37,7 @@ from lineagehub.output import (
     lineage_export_payload,
     run_impact_payload,
     run_list_row_payload,
+    run_show_payload,
     upstream_payload,
 )
 from lineagehub.store import MetadataStore, RunRecord
@@ -138,6 +139,16 @@ def main(argv: list[str] | None = None) -> int:
     p_runs_latest = runs_sub.add_parser("latest", help="Show the most recent run for a job")
     p_runs_latest.add_argument("--job", required=True, help="Job name")
     p_runs_latest.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    p_runs_show = runs_sub.add_parser(
+        "show",
+        help="Show one run by external id or numeric internal id",
+    )
+    p_runs_show.add_argument(
+        "run_id",
+        help="External run id (e.g. run_001) or numeric internal row id",
+    )
+    p_runs_show.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     depth_opt = {
         "choices": ["direct", "all"],
@@ -464,6 +475,23 @@ def main(argv: list[str] | None = None) -> int:
                                 print(f"  Started: {r.started_at}")
                             if r.ended_at is not None:
                                 print(f"  Ended: {r.ended_at}")
+                        return 0
+                    case "show":
+                        rec = store.get_run_record_by_display_id(args.run_id)
+                        if rec is None:
+                            raise ValueError(f"Unknown run: {args.run_id!r}")
+                        if args.json:
+                            sys.stdout.write(dumps_json(run_show_payload(rec)))
+                            return 0
+                        print(f"Run: {_run_display_id(rec)}\n")
+                        print(f"  Job: {rec.job_name}")
+                        print(f"  Status: {rec.status}")
+                        if rec.started_at is not None:
+                            print(f"  Started: {rec.started_at}")
+                        if rec.ended_at is not None:
+                            print(f"  Ended: {rec.ended_at}")
+                        if rec.error_message is not None:
+                            print(f"  Error: {rec.error_message}")
                         return 0
                     case "latest":
                         latest = store.get_latest_run(args.job)

@@ -28,6 +28,7 @@ from lineagehub.output import (
     lineage_export_payload,
     run_impact_payload,
     run_list_row_payload,
+    run_show_payload,
     upstream_payload,
 )
 from lineagehub.store import MetadataStore
@@ -253,6 +254,15 @@ def latest_run_for_job(job_name: str) -> dict[str, Any]:
         "job_name": job_name,
         "run": run_list_row_payload(latest) if latest is not None else None,
     }
+
+
+@app.get("/runs/{run_id}")
+def run_detail(run_id: str) -> dict[str, Any]:
+    store = _store()
+    rec = store.get_run_record_by_display_id(run_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run: {run_id!r}")
+    return run_show_payload(rec)
 
 
 @app.get("/runs/{run_id}/impact")

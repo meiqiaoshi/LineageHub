@@ -147,3 +147,19 @@ def test_runs_latest_text_no_runs(tmp_path: Path, capsys: pytest.CaptureFixture[
     assert main(["--db", str(db), "runs", "latest", "--job", "clean_orders_job"]) == 0
     assert "(no runs)" in capsys.readouterr().out
 
+
+def test_runs_show_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    db = _seed_db_with_runs(tmp_path)
+    assert main(["--db", str(db), "runs", "show", "run_001", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["query_type"] == "run_show"
+    assert payload["run"]["run_id"] == "run_001"
+    assert payload["run"]["job_name"] == "clean_orders_job"
+    assert payload["run"]["status"] == "failed"
+
+
+def test_runs_show_unknown(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    db = _seed_db_with_runs(tmp_path)
+    assert main(["--db", str(db), "runs", "show", "nope"]) == 1
+    assert "Unknown run" in capsys.readouterr().err
+

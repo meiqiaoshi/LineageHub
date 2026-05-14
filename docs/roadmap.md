@@ -57,12 +57,12 @@ Goal: Turn LineageHub into a local-first incident triage tool on top of stored l
 
 Delivered in code:
 
-- Run listing and filtering (`runs list`) and latest-run lookup by job (`runs latest`)
+- Run listing and filtering (`runs list`), single-run lookup (`runs show`), and latest-run lookup by job (`runs latest`)
 - Incident summaries over failed runs (`incidents summarize`) with downstream impact expansion
 - Blast radius scoring and severity bucketing, plus ranking (`incidents rank`)
 - Optional API endpoints for operational queries:
   - `GET /datasets`, `GET /datasets/{name}` (catalog + lineage context), `GET /datasets/{name}/upstream|downstream|impact`
-  - `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`
+  - `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /runs/{run_id}`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`
   - `GET /incidents/summary`, `GET /incidents/rank`
 
 Future phases can add cross-system connectors; see [integration_plan.md](integration_plan.md).

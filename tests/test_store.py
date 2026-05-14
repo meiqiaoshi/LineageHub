@@ -107,6 +107,26 @@ def test_list_jobs_includes_system(empty_store: MetadataStore) -> None:
     assert rows[0].description == "d"
 
 
+def test_get_run_record_by_display_id(empty_store: MetadataStore) -> None:
+    jid = empty_store.upsert_job(Job(name="job_a"))
+    internal = empty_store.insert_run(
+        Run(
+            job_id=jid,
+            status="failed",
+            external_run_id="ext_abc",
+            started_at="2026-01-01T00:00:00Z",
+        )
+    )
+    by_ext = empty_store.get_run_record_by_display_id("ext_abc")
+    assert by_ext is not None
+    assert by_ext.job_name == "job_a"
+    assert by_ext.internal_run_id == internal
+    by_int = empty_store.get_run_record_by_display_id(str(internal))
+    assert by_int is not None
+    assert by_int.external_run_id == "ext_abc"
+    assert empty_store.get_run_record_by_display_id("missing") is None
+
+
 def test_job_names_producing_and_consuming_dataset(empty_store: MetadataStore) -> None:
     up = empty_store.upsert_dataset(Dataset(name="upstream_ds"))
     down = empty_store.upsert_dataset(Dataset(name="downstream_ds"))

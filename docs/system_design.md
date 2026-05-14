@@ -89,6 +89,7 @@ lineagehub export lineage --format json
 lineagehub export incidents --limit 10
 lineagehub export incidents --ranked --limit 5
 lineagehub runs list --status failed
+lineagehub runs show run_001 --json
 lineagehub runs latest --job clean_orders_job
 lineagehub incidents summarize --json
 lineagehub incidents rank --json
@@ -115,13 +116,14 @@ GET /datasets/{name}/impact
 GET /jobs
 GET /jobs/{job_name}
 GET /runs
+GET /runs/{run_id}
 GET /jobs/{job_name}/runs/latest
 GET /runs/{run_id}/impact
 GET /incidents/summary
 GET /incidents/rank
 ```
 
-**`GET /datasets`** returns the same **`datasets_list`** envelope as **`lineagehub datasets list --json`** (`query_type`, `count`, `datasets` with optional catalog fields). **`GET /datasets/{name}`** returns the same **`dataset_show`** payload as **`lineagehub datasets show --json`** (transitive upstream/downstream, producer/consumer jobs). **`GET /jobs`** and **`GET /jobs/{job_name}`** mirror **`jobs list --json`** and **`jobs show --json`**.
+**`GET /datasets`** returns the same **`datasets_list`** envelope as **`lineagehub datasets list --json`** (`query_type`, `count`, `datasets` with optional catalog fields). **`GET /datasets/{name}`** returns the same **`dataset_show`** payload as **`lineagehub datasets show --json`** (transitive upstream/downstream, producer/consumer jobs). **`GET /jobs`** and **`GET /jobs/{job_name}`** mirror **`jobs list --json`** and **`jobs show --json`**. **`GET /runs/{run_id}`** matches **`runs show --json`** (`run_show` payload; **`run_id`** is external id or numeric internal id).
 
 ### 6. Metadata validation (`validation.py`)
 

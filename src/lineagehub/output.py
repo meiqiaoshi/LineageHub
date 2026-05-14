@@ -52,6 +52,11 @@ def run_list_row_payload(r: RunRecord) -> dict[str, Any]:
     }
 
 
+def run_show_payload(r: RunRecord) -> dict[str, Any]:
+    """Envelope for ``runs show --json`` and ``GET /runs/{run_id}``."""
+    return {"query_type": "run_show", "run": run_list_row_payload(r)}
+
+
 def upstream_payload(dataset: str, depth: str, items: list[LineageResult]) -> dict[str, Any]:
     return {
         "query_type": "upstream",

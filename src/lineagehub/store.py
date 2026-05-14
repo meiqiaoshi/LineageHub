@@ -366,6 +366,30 @@ class MetadataStore:
         finally:
             conn.close()
 
+    def get_run_record_by_display_id(self, run_id: str) -> RunRecord | None:
+        """Lookup by ``external_run_id``; if no row and ``run_id`` is all digits, by internal ``run_id``."""
+        conn = self.connect()
+        try:
+            _apply_runs_migrations(conn)
+            row = conn.execute(
+                """SELECT runs.run_id, runs.external_run_id, runs.job_id, jobs.name AS job_name,
+                          runs.status, runs.started_at, runs.ended_at, runs.error_message
+                   FROM runs INNER JOIN jobs ON runs.job_id = jobs.job_id
+                   WHERE runs.external_run_id = ?""",
+                (run_id,),
+            ).fetchone()
+            if row is None and run_id.isdigit():
+                row = conn.execute(
+                    """SELECT runs.run_id, runs.external_run_id, runs.job_id, jobs.name AS job_name,
+                              runs.status, runs.started_at, runs.ended_at, runs.error_message
+                       FROM runs INNER JOIN jobs ON runs.job_id = jobs.job_id
+                       WHERE runs.run_id = ?""",
+                    (int(run_id),),
+                ).fetchone()
+            return None if row is None else _row_to_run_record(row)
+        finally:
+            conn.close()
+
     def list_output_dataset_ids_for_job(self, job_id: int) -> list[int]:
         conn = self.connect()
         try:

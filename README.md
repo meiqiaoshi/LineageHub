@@ -224,7 +224,7 @@ This means `clean_orders` depends on `raw_orders`.
 
 **Phase 2** added pipeline runs (`load-runs`), run-aware downstream impact (`impact-run`), CLI **`--depth`** / **`--json`**, **`graph edges`** export, and an optional read-only HTTP API.
 
-**Phase 3** added operational incident triage: **`runs list`**, **`runs latest`**, **`incidents summarize`** / **`incidents rank`**, plus matching read-only API routes.
+**Phase 3** added operational incident triage: **`runs list`**, **`runs show`**, **`runs latest`**, **`incidents summarize`** / **`incidents rank`**, plus matching read-only API routes.
 
 **Phase 4 (metadata quality)** adds dataset/job catalog commands, optional catalog fields on datasets, metadata **`validate`** / **`doctor`**, directed **cycle detection**, JSON **export** of lineage and incidents, and **criticality-weighted** blast-radius scoring for incidents (see **Catalog and metadata quality** below). The authoritative shipped list remains under **Current Status**.
 
@@ -385,9 +385,9 @@ LineageHub/
 
 ### Phase 3 — Operational incident analysis
 
-- **`runs list`** / **`runs latest`** for recent and per-job run discovery
+- **`runs list`** / **`runs show`** / **`runs latest`** for recent and per-job run discovery
 - **`incidents summarize`** and **`incidents rank`** (blast radius; later **criticality-weighted** in Phase 4)
-- Read-only API: **`GET /runs`**, **`GET /jobs/{job}/runs/latest`**, **`GET /incidents/summary`**, **`GET /incidents/rank`**
+- Read-only API: **`GET /runs`**, **`GET /runs/{run_id}`**, **`GET /jobs/{job}/runs/latest`**, **`GET /incidents/summary`**, **`GET /incidents/rank`**
 
 ### Phase 4 — Catalog, validation, and exports (shipped) + integration (planned)
 
@@ -420,7 +420,7 @@ pip install -e ".[api]"
 LINEAGEHUB_DB=./lineagehub.db uvicorn lineagehub.api:app --reload
 ```
 
-Example endpoints (response JSON matches CLI `--json` payloads where noted): `GET /health`, `GET /validation`, `GET /graph/cycles`, `GET /graph/edges/{dataset}?direction=downstream&depth=all`, `GET /export/lineage`, `GET /export/incidents` (optional `ranked=true`, `limit`, `status`, `since`), `GET /datasets` (same **`datasets_list`** envelope as **`datasets list --json`**), `GET /datasets/{name}` (same **`dataset_show`** as **`datasets show --json`**), `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`, `GET /incidents/summary`, `GET /incidents/rank`.
+Example endpoints (response JSON matches CLI `--json` payloads where noted): `GET /health`, `GET /validation`, `GET /graph/cycles`, `GET /graph/edges/{dataset}?direction=downstream&depth=all`, `GET /export/lineage`, `GET /export/incidents` (optional `ranked=true`, `limit`, `status`, `since`), `GET /datasets` (same **`datasets_list`** envelope as **`datasets list --json`**), `GET /datasets/{name}` (same **`dataset_show`** as **`datasets show --json`**), `GET /datasets/{name}/upstream?depth=all`, `GET /datasets/{name}/downstream?depth=direct`, `GET /datasets/{name}/impact`, `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /runs/{run_id}` (same **`run_show`** as **`runs show --json`**), `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`, `GET /incidents/summary`, `GET /incidents/rank`.
 
 Load the sample lineage file into the default SQLite database (`./lineagehub.db`, unless overridden):
 
@@ -454,6 +454,8 @@ List runs (filter and inspect recent failures):
 lineagehub runs list
 lineagehub runs list --status failed --json
 lineagehub runs list --job clean_orders_job --limit 5
+lineagehub runs show run_001
+lineagehub runs show run_001 --json
 ```
 
 Latest run for a job:
@@ -633,7 +635,7 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI (including catalog routes, **`GET /validation`**, **`GET /graph/cycles`**, **`GET /graph/edges/{dataset}`**, and **`GET /export/*`**). Command-level workflows are summarized under **Catalog and metadata quality**.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** (**`list`** / **`show`** / **`latest`**) / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI (including catalog routes, **`GET /runs/{run_id}`**, **`GET /validation`**, **`GET /graph/cycles`**, **`GET /graph/edges/{dataset}`**, and **`GET /export/*`**). Command-level workflows are summarized under **Catalog and metadata quality**.
 
 **Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
 
