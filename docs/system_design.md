@@ -190,6 +190,8 @@ CLI: incidents summarize / incidents rank
 API: GET /incidents/summary / GET /incidents/rank
 ```
 
+**Filters and limits (CLI flags and matching query parameters on the read-only API):** `status` and `since` narrow which runs are included. For **`incidents summarize`** / **`GET /incidents/summary`**, **`limit`** caps how many matching failed runs are evaluated (most recent first—the same cap `summarize_failed_runs` applies at the store layer). For **`incidents rank`** / **`GET /incidents/rank`**, **`limit_runs`** caps runs passed into that summarize step before blast-radius scores and sorting; **`limit`** caps how many ranked rows are returned afterward (`limit_ranked` in `analysis.incident_ranking`). **`export incidents`** / **`GET /export/incidents`** mirror this: summary mode uses **`limit`** on runs; **`--ranked` / `ranked=true`** uses **`limit_runs`** plus **`limit`** on the ranked list. See the README **Operational incident analysis** and **Exporting Metadata** sections for examples.
+
 Layering is kept explicit and reusable:
 
 ```text

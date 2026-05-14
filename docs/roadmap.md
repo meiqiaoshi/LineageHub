@@ -63,7 +63,7 @@ Delivered in code:
 - Optional API endpoints for operational queries:
   - `GET /datasets`, `GET /datasets/{name}` (catalog + lineage context), `GET /datasets/{name}/upstream|downstream|impact`
   - `GET /jobs`, `GET /jobs/{job_name}`, `GET /runs`, `GET /runs/{run_id}`, `GET /jobs/{job_name}/runs/latest`, `GET /runs/{run_id}/impact`
-  - `GET /incidents/summary`, `GET /incidents/rank`
+  - `GET /incidents/summary`, `GET /incidents/rank` (optional query parameters documented in README and [system design](system_design.md): `status`, `since`, `limit`; rank adds `limit_runs`)
 
 Future phases can add cross-system connectors; see [integration_plan.md](integration_plan.md).
 
