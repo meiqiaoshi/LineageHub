@@ -27,7 +27,14 @@ def test_jobs_show_json_with_latest_run(tmp_path: Path, capsys: pytest.CaptureFi
     assert payload["job"]["name"] == "clean_orders_job"
     assert payload["inputs"] == ["raw_orders"]
     assert payload["outputs"] == ["clean_orders"]
-    assert payload["latest_run"] == {"run_id": "run_004", "status": "success"}
+    assert payload["latest_run"] == {
+        "run_id": "run_004",
+        "job_name": "clean_orders_job",
+        "status": "success",
+        "started_at": "2026-05-03T09:00:00Z",
+        "ended_at": "2026-05-03T09:02:00Z",
+        "error_message": None,
+    }
     assert payload["run_count"] == 2
 
 

@@ -35,6 +35,7 @@ from lineagehub.output import (
     impact_payload,
     lineage_export_payload,
     run_impact_payload,
+    run_list_row_payload,
     upstream_payload,
 )
 from lineagehub.store import MetadataStore, RunRecord
@@ -369,12 +370,7 @@ def main(argv: list[str] | None = None) -> int:
                         outputs = store.list_output_dataset_names_for_job(job.job_id)
                         latest = store.get_latest_run(args.job)
                         run_count = store.count_runs_for_job(job.job_id)
-                        latest_json = None
-                        if latest is not None:
-                            latest_json = {
-                                "run_id": _run_display_id(latest),
-                                "status": latest.status,
-                            }
+                        latest_json = run_list_row_payload(latest) if latest is not None else None
                         if args.json:
                             sys.stdout.write(
                                 dumps_json(
@@ -418,7 +414,7 @@ def main(argv: list[str] | None = None) -> int:
                                     "since": args.since,
                                     "limit": args.limit,
                                 },
-                                "runs": [_run_record_payload(r) for r in rows],
+                                "runs": [run_list_row_payload(r) for r in rows],
                             }
                             sys.stdout.write(dumps_json(payload))
                             return 0
@@ -443,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:
                             payload = {
                                 "query_type": "latest_run",
                                 "job_name": args.job,
-                                "run": _run_record_payload(latest) if latest is not None else None,
+                                "run": run_list_row_payload(latest) if latest is not None else None,
                             }
                             sys.stdout.write(dumps_json(payload))
                             return 0
@@ -659,16 +655,6 @@ def _print_bullets(names: list[str]) -> None:
 
 def _run_display_id(r: RunRecord) -> str:
     return r.external_run_id if r.external_run_id is not None else str(r.internal_run_id)
-
-
-def _run_record_payload(r: RunRecord) -> dict:
-    return {
-        "run_id": _run_display_id(r),
-        "job_name": r.job_name,
-        "status": r.status,
-        "started_at": r.started_at,
-        "ended_at": r.ended_at,
-    }
 
 
 def _bullets_or_none(names: list[str]) -> None:

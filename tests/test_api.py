@@ -200,7 +200,14 @@ def test_job_detail(api_client) -> None:
     assert body["inputs"] == ["raw_orders"]
     assert body["outputs"] == ["clean_orders"]
     assert body["run_count"] == 1
-    assert body["latest_run"] == {"run_id": "run_001", "status": "failed"}
+    assert body["latest_run"] == {
+        "run_id": "run_001",
+        "job_name": "clean_orders_job",
+        "status": "failed",
+        "started_at": "2026-05-01T09:00:00Z",
+        "ended_at": "2026-05-01T09:03:00Z",
+        "error_message": "Source dataset raw_orders was stale",
+    }
 
 
 def test_job_detail_unknown(api_client) -> None:
@@ -231,6 +238,14 @@ def test_api_list_runs_status_failed(api_client) -> None:
     body = r.json()
     assert body["filters"]["status"] == "failed"
     assert [row["run_id"] for row in body["runs"]] == ["run_003", "run_001"]
+
+
+def test_api_list_runs_includes_error_message(api_client) -> None:
+    r = api_client.get("/runs", params={"status": "failed"})
+    assert r.status_code == 200
+    by_id = {row["run_id"]: row for row in r.json()["runs"]}
+    assert by_id["run_001"]["error_message"] == "Source dataset raw_orders was stale"
+    assert by_id["run_003"]["error_message"] is None
 
 
 def test_api_jobs_latest_run(api_client) -> None:

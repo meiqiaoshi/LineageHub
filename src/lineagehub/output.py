@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from lineagehub.models import LineageResult, RunImpactAnalysis
-from lineagehub.store import DatasetRecord, MetadataStore
+from lineagehub.store import DatasetRecord, MetadataStore, RunRecord
 
 
 def dumps_json(data: dict[str, Any]) -> str:
@@ -36,6 +36,19 @@ def graph_edges_payload(
         "depth": depth,
         "edge_count": len(edges),
         "edges": [{"upstream": u, "downstream": v} for u, v in edges],
+    }
+
+
+def run_list_row_payload(r: RunRecord) -> dict[str, Any]:
+    """One run for ``runs list`` / ``runs latest`` JSON, API run rows, and ``job_show`` ``latest_run``."""
+    rid = r.external_run_id if r.external_run_id is not None else str(r.internal_run_id)
+    return {
+        "run_id": rid,
+        "job_name": r.job_name,
+        "status": r.status,
+        "started_at": r.started_at,
+        "ended_at": r.ended_at,
+        "error_message": r.error_message,
     }
 
 
@@ -191,7 +204,7 @@ def job_show_payload(
     description: str | None,
     inputs: list[str],
     outputs: list[str],
-    latest_run: dict[str, str] | None,
+    latest_run: dict[str, Any] | None,
     run_count: int,
 ) -> dict[str, Any]:
     return {

@@ -26,9 +26,10 @@ from lineagehub.output import (
     job_show_payload,
     lineage_export_payload,
     run_impact_payload,
+    run_list_row_payload,
     upstream_payload,
 )
-from lineagehub.store import MetadataStore, RunRecord
+from lineagehub.store import MetadataStore
 from lineagehub.validation import validate_metadata
 
 DepthQuery = Literal["direct", "all"]
@@ -39,17 +40,6 @@ app = FastAPI(title="LineageHub", version="0.3.0")
 
 def _store() -> MetadataStore:
     return MetadataStore(default_db_path())
-
-
-def _run_record_public_dict(r: RunRecord) -> dict[str, Any]:
-    rid = r.external_run_id if r.external_run_id is not None else str(r.internal_run_id)
-    return {
-        "run_id": rid,
-        "job_name": r.job_name,
-        "status": r.status,
-        "started_at": r.started_at,
-        "ended_at": r.ended_at,
-    }
 
 
 @app.get("/health")
@@ -216,7 +206,7 @@ def list_runs(
             "since": since,
             "limit": limit,
         },
-        "runs": [_run_record_public_dict(r) for r in rows],
+        "runs": [run_list_row_payload(r) for r in rows],
     }
 
 
@@ -241,10 +231,7 @@ def job_detail(job_name: str) -> dict[str, Any]:
     outputs = store.list_output_dataset_names_for_job(job.job_id)
     latest = store.get_latest_run(job_name)
     run_count = store.count_runs_for_job(job.job_id)
-    latest_json = None
-    if latest is not None:
-        rid = latest.external_run_id if latest.external_run_id is not None else str(latest.internal_run_id)
-        latest_json = {"run_id": rid, "status": latest.status}
+    latest_json = run_list_row_payload(latest) if latest is not None else None
     return job_show_payload(
         name=job.name,
         description=job.description,
@@ -262,7 +249,7 @@ def latest_run_for_job(job_name: str) -> dict[str, Any]:
     return {
         "query_type": "latest_run",
         "job_name": job_name,
-        "run": _run_record_public_dict(latest) if latest is not None else None,
+        "run": run_list_row_payload(latest) if latest is not None else None,
     }
 
 
