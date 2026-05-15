@@ -6,7 +6,14 @@ import json
 import re
 from typing import Any
 
-from lineagehub.graph import lineage_downstream_results, lineage_upstream_results
+from lineagehub.graph import (
+    analyze_run_impact,
+    collect_graph_edges,
+    find_cycles,
+    lineage_downstream_results,
+    lineage_impact_results,
+    lineage_upstream_results,
+)
 from lineagehub.models import LineageResult, RunImpactAnalysis
 from lineagehub.store import DatasetRecord, JobRecord, MetadataStore, RunRecord
 
@@ -116,6 +123,49 @@ def impact_payload(dataset: str, items: list[LineageResult]) -> dict[str, Any]:
         "affected_count": len(items),
         "affected_datasets": [{"name": x.name, "distance": x.distance} for x in items],
     }
+
+
+def _require_dataset(store: MetadataStore, name: str) -> None:
+    if store.get_dataset_id_by_name(name) is None:
+        raise ValueError(f"Unknown dataset: {name!r}")
+
+
+def upstream_for_dataset(store: MetadataStore, name: str, *, depth: str) -> dict[str, Any]:
+    """JSON for ``upstream --json`` and ``GET /datasets/{name}/upstream``."""
+    _require_dataset(store, name)
+    items = lineage_upstream_results(store, name, depth=depth)
+    return upstream_payload(name, depth, items)
+
+
+def downstream_for_dataset(store: MetadataStore, name: str, *, depth: str) -> dict[str, Any]:
+    """JSON for ``downstream --json`` and ``GET /datasets/{name}/downstream``."""
+    _require_dataset(store, name)
+    items = lineage_downstream_results(store, name, depth=depth)
+    return downstream_payload(name, depth, items)
+
+
+def impact_for_dataset(store: MetadataStore, name: str) -> dict[str, Any]:
+    """JSON for ``impact --json`` and ``GET /datasets/{name}/impact``."""
+    _require_dataset(store, name)
+    items = lineage_impact_results(store, name, depth="all")
+    return impact_payload(name, items)
+
+
+def graph_cycles_for_store(store: MetadataStore) -> dict[str, Any]:
+    """JSON for ``graph cycles --json`` and ``GET /graph/cycles``."""
+    return graph_cycles_payload(find_cycles(store))
+
+
+def graph_edges_json(
+    store: MetadataStore,
+    dataset_name: str,
+    *,
+    direction: str,
+    depth: str,
+) -> dict[str, Any]:
+    """JSON for ``GET /graph/edges/{dataset}`` (``collect_graph_edges`` may raise ``ValueError``)."""
+    edges = collect_graph_edges(store, dataset_name, direction=direction, depth=depth)
+    return graph_edges_payload(dataset_name, direction, depth, edges)
 
 
 def dataset_catalog_row(
@@ -356,6 +406,20 @@ def job_show_for_name(store: MetadataStore, job_name: str) -> dict[str, Any]:
         latest_run=run_list_row_payload(latest) if latest is not None else None,
         run_count=run_count,
     )
+
+
+def run_show_for_run_id(store: MetadataStore, run_id: str) -> dict[str, Any]:
+    """JSON for ``runs show --json`` and ``GET /runs/{run_id}``."""
+    rec = store.get_run_record_by_display_id(run_id)
+    if rec is None:
+        raise ValueError(f"Unknown run: {run_id!r}")
+    return run_show_payload(rec)
+
+
+def run_impact_for_run_id(store: MetadataStore, run_id: str) -> dict[str, Any]:
+    """JSON for ``impact-run --json`` and ``GET /runs/{run_id}/impact``."""
+    analysis = analyze_run_impact(store, run_id)
+    return run_impact_payload(analysis)
 
 
 def run_impact_payload(analysis: RunImpactAnalysis) -> dict[str, Any]:

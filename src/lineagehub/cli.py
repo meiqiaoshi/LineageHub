@@ -16,31 +16,28 @@ from lineagehub.graph import (
     get_downstream,
     get_upstream,
     impact_analysis,
-    lineage_downstream_results,
-    lineage_impact_results,
-    lineage_upstream_results,
 )
 from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
     datasets_list_payload,
     dataset_show_for_name,
-    downstream_payload,
+    downstream_for_dataset,
+    graph_cycles_for_store,
     jobs_list_payload,
     job_show_for_name,
     dumps_json,
     format_edges_dot,
     format_edges_mermaid,
     format_edges_text,
-    graph_cycles_payload,
-    impact_payload,
+    impact_for_dataset,
     lineage_export_payload,
-    run_impact_payload,
     latest_run_payload,
+    run_impact_for_run_id,
     run_list_row_payload,
-    run_show_payload,
+    run_show_for_run_id,
     runs_list_payload,
-    upstream_payload,
+    upstream_for_dataset,
 )
 from lineagehub.store import MetadataStore, RunRecord
 from lineagehub.validation import validate_metadata
@@ -438,7 +435,7 @@ def main(argv: list[str] | None = None) -> int:
                         if rec is None:
                             raise ValueError(f"Unknown run: {args.run_id!r}")
                         if args.json:
-                            sys.stdout.write(dumps_json(run_show_payload(rec)))
+                            sys.stdout.write(dumps_json(run_show_for_run_id(store, args.run_id)))
                             return 0
                         print(f"Run: {_run_display_id(rec)}\n")
                         print(f"  Job: {rec.job_name}")
@@ -534,8 +531,7 @@ def main(argv: list[str] | None = None) -> int:
                         )
             case "upstream":
                 if args.json:
-                    items = lineage_upstream_results(store, args.dataset, depth=args.depth)
-                    sys.stdout.write(dumps_json(upstream_payload(args.dataset, args.depth, items)))
+                    sys.stdout.write(dumps_json(upstream_for_dataset(store, args.dataset, depth=args.depth)))
                     return 0
                 rows = (
                     get_direct_upstream(store, args.dataset)
@@ -548,8 +544,9 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             case "downstream":
                 if args.json:
-                    items = lineage_downstream_results(store, args.dataset, depth=args.depth)
-                    sys.stdout.write(dumps_json(downstream_payload(args.dataset, args.depth, items)))
+                    sys.stdout.write(
+                        dumps_json(downstream_for_dataset(store, args.dataset, depth=args.depth))
+                    )
                     return 0
                 rows = (
                     get_direct_downstream(store, args.dataset)
@@ -562,8 +559,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             case "impact":
                 if args.json:
-                    items = lineage_impact_results(store, args.dataset, depth="all")
-                    sys.stdout.write(dumps_json(impact_payload(args.dataset, items)))
+                    sys.stdout.write(dumps_json(impact_for_dataset(store, args.dataset)))
                     return 0
                 rows = impact_analysis(store, args.dataset)
                 print(f"Downstream assets affected by {args.dataset}:\n")
@@ -591,7 +587,7 @@ def main(argv: list[str] | None = None) -> int:
                     case "cycles":
                         cycles = find_cycles(store)
                         if args.json:
-                            sys.stdout.write(dumps_json(graph_cycles_payload(cycles)))
+                            sys.stdout.write(dumps_json(graph_cycles_for_store(store)))
                             return 0
                         if not cycles:
                             print("No lineage cycles detected.")
@@ -605,7 +601,7 @@ def main(argv: list[str] | None = None) -> int:
             case "impact-run":
                 analysis = analyze_run_impact(store, args.run_id)
                 if args.json:
-                    sys.stdout.write(dumps_json(run_impact_payload(analysis)))
+                    sys.stdout.write(dumps_json(run_impact_for_run_id(store, args.run_id)))
                     return 0
                 print(f"Run impact analysis for {analysis.external_run_id}\n")
                 print(f"Job: {analysis.job_name}")

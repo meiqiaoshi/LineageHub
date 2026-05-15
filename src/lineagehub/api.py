@@ -8,29 +8,21 @@ from fastapi import FastAPI, HTTPException, Query
 
 from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.db_path import default_db_path
-from lineagehub.graph import (
-    analyze_run_impact,
-    collect_graph_edges,
-    find_cycles,
-    lineage_downstream_results,
-    lineage_impact_results,
-    lineage_upstream_results,
-)
 from lineagehub.output import (
     dataset_show_for_name,
     datasets_list_payload,
-    downstream_payload,
-    graph_cycles_payload,
-    graph_edges_payload,
-    impact_payload,
+    downstream_for_dataset,
+    graph_cycles_for_store,
+    graph_edges_json,
+    impact_for_dataset,
     jobs_list_payload,
     job_show_for_name,
     lineage_export_payload,
     latest_run_payload,
-    run_impact_payload,
-    run_show_payload,
+    run_impact_for_run_id,
+    run_show_for_run_id,
     runs_list_payload,
-    upstream_payload,
+    upstream_for_dataset,
 )
 from lineagehub.store import MetadataStore
 from lineagehub.validation import validate_metadata
@@ -59,7 +51,7 @@ def metadata_validation() -> dict[str, Any]:
 @app.get("/graph/cycles")
 def graph_cycles() -> dict[str, Any]:
     store = _store()
-    return graph_cycles_payload(find_cycles(store))
+    return graph_cycles_for_store(store)
 
 
 @app.get("/graph/edges/{dataset_name}")
@@ -70,10 +62,9 @@ def graph_edges_for_dataset(
 ) -> dict[str, Any]:
     store = _store()
     try:
-        edges = collect_graph_edges(store, dataset_name, direction=direction, depth=depth)
+        return graph_edges_json(store, dataset_name, direction=direction, depth=depth)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return graph_edges_payload(dataset_name, direction, depth, edges)
 
 
 @app.get("/export/lineage")
@@ -127,10 +118,10 @@ def dataset_upstream(
     depth: DepthQuery = Query("all", description="direct: one hop; all: transitive closure"),
 ) -> dict[str, Any]:
     store = _store()
-    if store.get_dataset_id_by_name(name) is None:
-        raise HTTPException(status_code=404, detail=f"Unknown dataset: {name!r}")
-    items = lineage_upstream_results(store, name, depth=depth)
-    return upstream_payload(name, depth, items)
+    try:
+        return upstream_for_dataset(store, name, depth=depth)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.get("/datasets/{name}/downstream")
@@ -139,19 +130,19 @@ def dataset_downstream(
     depth: DepthQuery = Query("all", description="direct: one hop; all: transitive closure"),
 ) -> dict[str, Any]:
     store = _store()
-    if store.get_dataset_id_by_name(name) is None:
-        raise HTTPException(status_code=404, detail=f"Unknown dataset: {name!r}")
-    items = lineage_downstream_results(store, name, depth=depth)
-    return downstream_payload(name, depth, items)
+    try:
+        return downstream_for_dataset(store, name, depth=depth)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.get("/datasets/{name}/impact")
 def dataset_impact(name: str) -> dict[str, Any]:
     store = _store()
-    if store.get_dataset_id_by_name(name) is None:
-        raise HTTPException(status_code=404, detail=f"Unknown dataset: {name!r}")
-    items = lineage_impact_results(store, name, depth="all")
-    return impact_payload(name, items)
+    try:
+        return impact_for_dataset(store, name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.get("/incidents/summary")
@@ -222,17 +213,16 @@ def latest_run_for_job(job_name: str) -> dict[str, Any]:
 @app.get("/runs/{run_id}")
 def run_detail(run_id: str) -> dict[str, Any]:
     store = _store()
-    rec = store.get_run_record_by_display_id(run_id)
-    if rec is None:
-        raise HTTPException(status_code=404, detail=f"Unknown run: {run_id!r}")
-    return run_show_payload(rec)
+    try:
+        return run_show_for_run_id(store, run_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.get("/runs/{run_id}/impact")
 def run_impact(run_id: str) -> dict[str, Any]:
     store = _store()
     try:
-        analysis = analyze_run_impact(store, run_id)
+        return run_impact_for_run_id(store, run_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return run_impact_payload(analysis)
