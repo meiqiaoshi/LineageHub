@@ -17,18 +17,17 @@ from lineagehub.graph import (
     lineage_upstream_results,
 )
 from lineagehub.output import (
-    dataset_show_payload,
+    dataset_show_for_name,
     datasets_list_payload,
     downstream_payload,
     graph_cycles_payload,
     graph_edges_payload,
     impact_payload,
     jobs_list_payload,
-    job_show_payload,
+    job_show_for_name,
     lineage_export_payload,
     latest_run_payload,
     run_impact_payload,
-    run_list_row_payload,
     run_show_payload,
     runs_list_payload,
     upstream_payload,
@@ -116,27 +115,10 @@ def list_datasets() -> dict[str, Any]:
 @app.get("/datasets/{name}")
 def dataset_detail(name: str) -> dict[str, Any]:
     store = _store()
-    ds = store.get_dataset_by_name(name)
-    if ds is None or ds.dataset_id is None:
-        raise HTTPException(status_code=404, detail=f"Unknown dataset: {name!r}")
-    upstream_items = lineage_upstream_results(store, name, depth="all")
-    downstream_items = lineage_downstream_results(store, name, depth="all")
-    producers = store.list_job_names_producing_dataset(ds.dataset_id)
-    consumers = store.list_job_names_consuming_dataset(ds.dataset_id)
-    return dataset_show_payload(
-        name=name,
-        dataset_type=ds.dataset_type,
-        uri=ds.uri,
-        producer_jobs=producers,
-        consumer_jobs=consumers,
-        upstream=upstream_items,
-        downstream=downstream_items,
-        owner=ds.owner,
-        description=ds.description,
-        tags=ds.tags,
-        criticality=ds.criticality,
-        system=ds.system,
-    )
+    try:
+        return dataset_show_for_name(store, name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.get("/datasets/{name}/upstream")
@@ -224,23 +206,10 @@ def list_jobs() -> dict[str, Any]:
 @app.get("/jobs/{job_name}")
 def job_detail(job_name: str) -> dict[str, Any]:
     store = _store()
-    job = store.get_job_by_name(job_name)
-    if job is None or job.job_id is None:
-        raise HTTPException(status_code=404, detail=f"Unknown job: {job_name!r}")
-    inputs = store.list_input_dataset_names_for_job(job.job_id)
-    outputs = store.list_output_dataset_names_for_job(job.job_id)
-    latest = store.get_latest_run(job_name)
-    run_count = store.count_runs_for_job(job.job_id)
-    latest_json = run_list_row_payload(latest) if latest is not None else None
-    return job_show_payload(
-        name=job.name,
-        description=job.description,
-        system=job.system,
-        inputs=inputs,
-        outputs=outputs,
-        latest_run=latest_json,
-        run_count=run_count,
-    )
+    try:
+        return job_show_for_name(store, job_name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.get("/jobs/{job_name}/runs/latest")

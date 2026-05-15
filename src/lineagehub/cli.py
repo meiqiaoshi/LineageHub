@@ -24,10 +24,10 @@ from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
     datasets_list_payload,
-    dataset_show_payload,
+    dataset_show_for_name,
     downstream_payload,
     jobs_list_payload,
-    job_show_payload,
+    job_show_for_name,
     dumps_json,
     format_edges_dot,
     format_edges_mermaid,
@@ -334,24 +334,7 @@ def main(argv: list[str] | None = None) -> int:
                         producers = store.list_job_names_producing_dataset(ds.dataset_id)
                         consumers = store.list_job_names_consuming_dataset(ds.dataset_id)
                         if args.json:
-                            sys.stdout.write(
-                                dumps_json(
-                                    dataset_show_payload(
-                                        name=args.dataset,
-                                        dataset_type=ds.dataset_type,
-                                        uri=ds.uri,
-                                        producer_jobs=producers,
-                                        consumer_jobs=consumers,
-                                        upstream=upstream_items,
-                                        downstream=downstream_items,
-                                        owner=ds.owner,
-                                        description=ds.description,
-                                        tags=ds.tags,
-                                        criticality=ds.criticality,
-                                        system=ds.system,
-                                    )
-                                )
-                            )
+                            sys.stdout.write(dumps_json(dataset_show_for_name(store, args.dataset)))
                             return 0
                         _print_dataset_show(
                             name=args.dataset,
@@ -398,21 +381,8 @@ def main(argv: list[str] | None = None) -> int:
                         outputs = store.list_output_dataset_names_for_job(job.job_id)
                         latest = store.get_latest_run(args.job)
                         run_count = store.count_runs_for_job(job.job_id)
-                        latest_json = run_list_row_payload(latest) if latest is not None else None
                         if args.json:
-                            sys.stdout.write(
-                                dumps_json(
-                                    job_show_payload(
-                                        name=job.name,
-                                        description=job.description,
-                                        system=job.system,
-                                        inputs=inputs,
-                                        outputs=outputs,
-                                        latest_run=latest_json,
-                                        run_count=run_count,
-                                    )
-                                )
-                            )
+                            sys.stdout.write(dumps_json(job_show_for_name(store, args.job)))
                             return 0
                         _print_job_show(
                             name=job.name,

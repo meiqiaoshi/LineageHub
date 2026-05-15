@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+from lineagehub.graph import lineage_downstream_results, lineage_upstream_results
 from lineagehub.models import LineageResult, RunImpactAnalysis
 from lineagehub.store import DatasetRecord, JobRecord, MetadataStore, RunRecord
 
@@ -310,6 +311,51 @@ def dataset_show_payload(
         "upstream": [{"name": x.name, "distance": x.distance} for x in upstream],
         "downstream": [{"name": x.name, "distance": x.distance} for x in downstream],
     }
+
+
+def dataset_show_for_name(store: MetadataStore, name: str) -> dict[str, Any]:
+    """Build ``dataset_show`` JSON for ``datasets show --json`` and ``GET /datasets/{name}``."""
+    ds = store.get_dataset_by_name(name)
+    if ds is None or ds.dataset_id is None:
+        raise ValueError(f"Unknown dataset: {name!r}")
+    upstream_items = lineage_upstream_results(store, name, depth="all")
+    downstream_items = lineage_downstream_results(store, name, depth="all")
+    producers = store.list_job_names_producing_dataset(ds.dataset_id)
+    consumers = store.list_job_names_consuming_dataset(ds.dataset_id)
+    return dataset_show_payload(
+        name=name,
+        dataset_type=ds.dataset_type,
+        uri=ds.uri,
+        producer_jobs=producers,
+        consumer_jobs=consumers,
+        upstream=upstream_items,
+        downstream=downstream_items,
+        owner=ds.owner,
+        description=ds.description,
+        tags=ds.tags,
+        criticality=ds.criticality,
+        system=ds.system,
+    )
+
+
+def job_show_for_name(store: MetadataStore, job_name: str) -> dict[str, Any]:
+    """Build ``job_show`` JSON for ``jobs show --json`` and ``GET /jobs/{job_name}``."""
+    job = store.get_job_by_name(job_name)
+    if job is None or job.job_id is None:
+        raise ValueError(f"Unknown job: {job_name!r}")
+    inputs = store.list_input_dataset_names_for_job(job.job_id)
+    outputs = store.list_output_dataset_names_for_job(job.job_id)
+    latest = store.get_latest_run(job_name)
+    run_count = store.count_runs_for_job(job.job_id)
+    return job_show_payload(
+        name=job.name,
+        description=job.description,
+        system=job.system,
+        inputs=inputs,
+        outputs=outputs,
+        latest_run=run_list_row_payload(latest) if latest is not None else None,
+        run_count=run_count,
+    )
 
 
 def run_impact_payload(analysis: RunImpactAnalysis) -> dict[str, Any]:
