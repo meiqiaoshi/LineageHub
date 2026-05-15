@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from lineagehub.models import LineageResult, RunImpactAnalysis
-from lineagehub.store import DatasetRecord, MetadataStore, RunRecord
+from lineagehub.store import DatasetRecord, JobRecord, MetadataStore, RunRecord
 
 
 def dumps_json(data: dict[str, Any]) -> str:
@@ -244,6 +244,17 @@ def job_catalog_row(
         "name": name,
         "description": description,
         "system": system,
+    }
+
+
+def jobs_list_payload(records: list[JobRecord]) -> dict[str, Any]:
+    """Same envelope as ``lineagehub jobs list --json`` and ``GET /jobs``."""
+    return {
+        "query_type": "jobs_list",
+        "count": len(records),
+        "jobs": [
+            job_catalog_row(name=r.name, description=r.description, system=r.system) for r in records
+        ],
     }
 
 

@@ -23,7 +23,7 @@ from lineagehub.output import (
     graph_cycles_payload,
     graph_edges_payload,
     impact_payload,
-    job_catalog_row,
+    jobs_list_payload,
     job_show_payload,
     lineage_export_payload,
     latest_run_payload,
@@ -218,12 +218,7 @@ def list_runs(
 @app.get("/jobs")
 def list_jobs() -> dict[str, Any]:
     store = _store()
-    rows = store.list_jobs()
-    return {
-        "query_type": "jobs_list",
-        "count": len(rows),
-        "jobs": [job_catalog_row(name=r.name, description=r.description, system=r.system) for r in rows],
-    }
+    return jobs_list_payload(store.list_jobs())
 
 
 @app.get("/jobs/{job_name}")

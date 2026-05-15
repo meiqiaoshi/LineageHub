@@ -23,10 +23,10 @@ from lineagehub.graph import (
 from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
-    dataset_catalog_row,
+    datasets_list_payload,
     dataset_show_payload,
     downstream_payload,
-    job_catalog_row,
+    jobs_list_payload,
     job_show_payload,
     dumps_json,
     format_edges_dot,
@@ -302,24 +302,7 @@ def main(argv: list[str] | None = None) -> int:
                     case "list":
                         rows = store.list_dataset_records()
                         if args.json:
-                            payload = {
-                                "query_type": "datasets_list",
-                                "count": len(rows),
-                                "datasets": [
-                                    dataset_catalog_row(
-                                        name=r.name,
-                                        dataset_type=r.dataset_type,
-                                        uri=r.uri,
-                                        owner=r.owner,
-                                        description=r.description,
-                                        tags=r.tags,
-                                        criticality=r.criticality,
-                                        system=r.system,
-                                    )
-                                    for r in rows
-                                ],
-                            }
-                            sys.stdout.write(dumps_json(payload))
+                            sys.stdout.write(dumps_json(datasets_list_payload(rows)))
                             return 0
 
                         print("Datasets:\n")
@@ -392,17 +375,7 @@ def main(argv: list[str] | None = None) -> int:
                     case "list":
                         rows = store.list_jobs()
                         if args.json:
-                            payload = {
-                                "query_type": "jobs_list",
-                                "count": len(rows),
-                                "jobs": [
-                                    job_catalog_row(
-                                        name=r.name, description=r.description, system=r.system
-                                    )
-                                    for r in rows
-                                ],
-                            }
-                            sys.stdout.write(dumps_json(payload))
+                            sys.stdout.write(dumps_json(jobs_list_payload(rows)))
                             return 0
 
                         print("Jobs:\n")
