@@ -70,6 +70,16 @@ def test_runs_list_status_filter(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert [r["run_id"] for r in payload["runs"]] == ["run_001"]
 
 
+def test_runs_list_since_filter(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    db = _seed_db_with_runs(tmp_path)
+    assert main(
+        ["--db", str(db), "runs", "list", "--since", "2026-05-01T11:00:00Z", "--json"]
+    ) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["filters"]["since"] == "2026-05-01T11:00:00Z"
+    assert [r["run_id"] for r in payload["runs"]] == ["run_002"]
+
+
 def test_runs_list_empty(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     db = tmp_path / "empty.db"
     store = MetadataStore(db)

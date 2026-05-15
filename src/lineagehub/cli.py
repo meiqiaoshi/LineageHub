@@ -36,8 +36,10 @@ from lineagehub.output import (
     impact_payload,
     lineage_export_payload,
     run_impact_payload,
+    latest_run_payload,
     run_list_row_payload,
     run_show_payload,
+    runs_list_payload,
     upstream_payload,
 )
 from lineagehub.store import MetadataStore, RunRecord
@@ -461,17 +463,17 @@ def main(argv: list[str] | None = None) -> int:
                             limit=args.limit,
                         )
                         if args.json:
-                            payload = {
-                                "query_type": "runs_list",
-                                "filters": {
-                                    "status": args.status,
-                                    "job": args.job,
-                                    "since": args.since,
-                                    "limit": args.limit,
-                                },
-                                "runs": [run_list_row_payload(r) for r in rows],
-                            }
-                            sys.stdout.write(dumps_json(payload))
+                            sys.stdout.write(
+                                dumps_json(
+                                    runs_list_payload(
+                                        rows,
+                                        status=args.status,
+                                        job=args.job,
+                                        since=args.since,
+                                        limit=args.limit,
+                                    )
+                                )
+                            )
                             return 0
 
                         print("Recent runs:\n")
@@ -508,12 +510,7 @@ def main(argv: list[str] | None = None) -> int:
                     case "latest":
                         latest = store.get_latest_run(args.job)
                         if args.json:
-                            payload = {
-                                "query_type": "latest_run",
-                                "job_name": args.job,
-                                "run": run_list_row_payload(latest) if latest is not None else None,
-                            }
-                            sys.stdout.write(dumps_json(payload))
+                            sys.stdout.write(dumps_json(latest_run_payload(args.job, latest)))
                             return 0
 
                         print(f"Latest run for {args.job}:\n")

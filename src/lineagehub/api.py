@@ -26,9 +26,11 @@ from lineagehub.output import (
     job_catalog_row,
     job_show_payload,
     lineage_export_payload,
+    latest_run_payload,
     run_impact_payload,
     run_list_row_payload,
     run_show_payload,
+    runs_list_payload,
     upstream_payload,
 )
 from lineagehub.store import MetadataStore
@@ -210,16 +212,7 @@ def list_runs(
 ) -> dict[str, Any]:
     store = _store()
     rows = store.list_runs(status=status, job_name=job, since=since, limit=limit)
-    return {
-        "query_type": "runs_list",
-        "filters": {
-            "status": status,
-            "job": job,
-            "since": since,
-            "limit": limit,
-        },
-        "runs": [run_list_row_payload(r) for r in rows],
-    }
+    return runs_list_payload(rows, status=status, job=job, since=since, limit=limit)
 
 
 @app.get("/jobs")
@@ -259,11 +252,7 @@ def job_detail(job_name: str) -> dict[str, Any]:
 def latest_run_for_job(job_name: str) -> dict[str, Any]:
     store = _store()
     latest = store.get_latest_run(job_name)
-    return {
-        "query_type": "latest_run",
-        "job_name": job_name,
-        "run": run_list_row_payload(latest) if latest is not None else None,
-    }
+    return latest_run_payload(job_name, latest)
 
 
 @app.get("/runs/{run_id}")

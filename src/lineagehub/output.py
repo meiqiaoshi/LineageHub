@@ -57,6 +57,36 @@ def run_show_payload(r: RunRecord) -> dict[str, Any]:
     return {"query_type": "run_show", "run": run_list_row_payload(r)}
 
 
+def runs_list_payload(
+    rows: list[RunRecord],
+    *,
+    status: str | None,
+    job: str | None,
+    since: str | None,
+    limit: int | None,
+) -> dict[str, Any]:
+    """Envelope for ``runs list --json`` and ``GET /runs``."""
+    return {
+        "query_type": "runs_list",
+        "filters": {
+            "status": status,
+            "job": job,
+            "since": since,
+            "limit": limit,
+        },
+        "runs": [run_list_row_payload(r) for r in rows],
+    }
+
+
+def latest_run_payload(job_name: str, latest: RunRecord | None) -> dict[str, Any]:
+    """Envelope for ``runs latest --json`` and ``GET /jobs/{job_name}/runs/latest``."""
+    return {
+        "query_type": "latest_run",
+        "job_name": job_name,
+        "run": run_list_row_payload(latest) if latest is not None else None,
+    }
+
+
 def upstream_payload(dataset: str, depth: str, items: list[LineageResult]) -> dict[str, Any]:
     return {
         "query_type": "upstream",

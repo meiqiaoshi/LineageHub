@@ -263,6 +263,14 @@ def test_api_list_runs_status_failed(api_client) -> None:
     assert [row["run_id"] for row in body["runs"]] == ["run_003", "run_001"]
 
 
+def test_api_list_runs_since(api_client) -> None:
+    r = api_client.get("/runs", params={"since": "2026-05-02T00:00:00Z"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["filters"]["since"] == "2026-05-02T00:00:00Z"
+    assert [row["run_id"] for row in body["runs"]] == ["run_003", "run_002"]
+
+
 def test_api_list_runs_includes_error_message(api_client) -> None:
     r = api_client.get("/runs", params={"status": "failed"})
     assert r.status_code == 200
