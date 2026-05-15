@@ -6,15 +6,17 @@ from typing import Any, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 
-from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.db_path import default_db_path
 from lineagehub.output import (
     dataset_show_for_name,
     datasets_list_payload,
     downstream_for_dataset,
+    export_incidents_payload,
     graph_cycles_for_store,
     graph_edges_json,
     impact_for_dataset,
+    incidents_rank_for_store,
+    incidents_summary_for_store,
     jobs_list_payload,
     job_show_for_name,
     lineage_export_payload,
@@ -86,15 +88,14 @@ def export_incidents(
     ),
 ) -> dict[str, Any]:
     store = _store()
-    if ranked:
-        return incident_ranking(
-            store,
-            status=status,
-            since=since,
-            limit_runs=limit_runs,
-            limit_ranked=limit,
-        )
-    return summarize_failed_runs(store, status=status, since=since, limit=limit)
+    return export_incidents_payload(
+        store,
+        ranked=ranked,
+        status=status,
+        since=since,
+        limit=limit,
+        limit_runs=limit_runs,
+    )
 
 
 @app.get("/datasets")
@@ -152,7 +153,7 @@ def incidents_summary(
     limit: Optional[int] = Query(None, ge=1, description="Max runs evaluated"),
 ) -> dict[str, Any]:
     store = _store()
-    return summarize_failed_runs(store, status=status, since=since, limit=limit)
+    return incidents_summary_for_store(store, status=status, since=since, limit=limit)
 
 
 @app.get("/incidents/rank")
@@ -167,7 +168,7 @@ def incidents_rank(
     ),
 ) -> dict[str, Any]:
     store = _store()
-    return incident_ranking(
+    return incidents_rank_for_store(
         store,
         status=status,
         since=since,

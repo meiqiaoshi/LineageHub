@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.graph import (
     analyze_run_impact,
     collect_graph_edges,
@@ -406,6 +407,56 @@ def job_show_for_name(store: MetadataStore, job_name: str) -> dict[str, Any]:
         latest_run=run_list_row_payload(latest) if latest is not None else None,
         run_count=run_count,
     )
+
+
+def incidents_summary_for_store(
+    store: MetadataStore,
+    *,
+    status: str = "failed",
+    since: str | None = None,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """JSON for ``incidents summarize --json`` and ``GET /incidents/summary``."""
+    return summarize_failed_runs(store, status=status, since=since, limit=limit)
+
+
+def incidents_rank_for_store(
+    store: MetadataStore,
+    *,
+    status: str = "failed",
+    since: str | None = None,
+    limit_runs: int | None = None,
+    limit_ranked: int | None = None,
+) -> dict[str, Any]:
+    """JSON for ``incidents rank --json`` and ``GET /incidents/rank``."""
+    return incident_ranking(
+        store,
+        status=status,
+        since=since,
+        limit_runs=limit_runs,
+        limit_ranked=limit_ranked,
+    )
+
+
+def export_incidents_payload(
+    store: MetadataStore,
+    *,
+    ranked: bool,
+    status: str = "failed",
+    since: str | None = None,
+    limit: int | None = None,
+    limit_runs: int | None = None,
+) -> dict[str, Any]:
+    """JSON for ``export incidents`` and ``GET /export/incidents``."""
+    if ranked:
+        return incidents_rank_for_store(
+            store,
+            status=status,
+            since=since,
+            limit_runs=limit_runs,
+            limit_ranked=limit,
+        )
+    return incidents_summary_for_store(store, status=status, since=since, limit=limit)
 
 
 def run_show_for_run_id(store: MetadataStore, run_id: str) -> dict[str, Any]:

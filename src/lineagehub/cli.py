@@ -16,21 +16,25 @@ from lineagehub.graph import (
     get_downstream,
     get_upstream,
     impact_analysis,
+    lineage_downstream_results,
+    lineage_upstream_results,
 )
-from lineagehub.analysis import incident_ranking, summarize_failed_runs
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
     datasets_list_payload,
     dataset_show_for_name,
     downstream_for_dataset,
-    graph_cycles_for_store,
-    jobs_list_payload,
-    job_show_for_name,
     dumps_json,
+    export_incidents_payload,
     format_edges_dot,
     format_edges_mermaid,
     format_edges_text,
+    graph_cycles_for_store,
     impact_for_dataset,
+    incidents_rank_for_store,
+    incidents_summary_for_store,
+    jobs_list_payload,
+    job_show_for_name,
     lineage_export_payload,
     latest_run_payload,
     run_impact_for_run_id,
@@ -275,22 +279,18 @@ def main(argv: list[str] | None = None) -> int:
                     case "incidents":
                         if args.format != "json":
                             raise RuntimeError(f"unhandled export format: {args.format!r}")
-                        if args.ranked:
-                            payload = incident_ranking(
-                                store,
-                                status=args.status,
-                                since=args.since,
-                                limit_runs=args.limit_runs,
-                                limit_ranked=args.limit,
+                        sys.stdout.write(
+                            dumps_json(
+                                export_incidents_payload(
+                                    store,
+                                    ranked=args.ranked,
+                                    status=args.status,
+                                    since=args.since,
+                                    limit=args.limit,
+                                    limit_runs=args.limit_runs,
+                                )
                             )
-                        else:
-                            payload = summarize_failed_runs(
-                                store,
-                                status=args.status,
-                                since=args.since,
-                                limit=args.limit,
-                            )
-                        sys.stdout.write(dumps_json(payload))
+                        )
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled export command: {args.export_command!r}")
@@ -469,7 +469,7 @@ def main(argv: list[str] | None = None) -> int:
             case "incidents":
                 match args.incidents_command:
                     case "summarize":
-                        result = summarize_failed_runs(
+                        result = incidents_summary_for_store(
                             store,
                             status=args.status,
                             since=args.since,
@@ -501,7 +501,7 @@ def main(argv: list[str] | None = None) -> int:
                             print()
                         return 0
                     case "rank":
-                        payload = incident_ranking(
+                        payload = incidents_rank_for_store(
                             store,
                             status=args.status,
                             since=args.since,
