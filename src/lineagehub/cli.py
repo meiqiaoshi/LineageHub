@@ -16,8 +16,6 @@ from lineagehub.graph import (
     get_downstream,
     get_upstream,
     impact_analysis,
-    lineage_downstream_results,
-    lineage_upstream_results,
 )
 from lineagehub.loader import load_lineage_json, load_runs_json
 from lineagehub.output import (
@@ -34,6 +32,7 @@ from lineagehub.output import (
     incidents_rank_for_store,
     incidents_summary_for_store,
     jobs_list_payload,
+    metadata_validation_for_store,
     job_show_for_name,
     lineage_export_payload,
     latest_run_payload,
@@ -44,7 +43,6 @@ from lineagehub.output import (
     upstream_for_dataset,
 )
 from lineagehub.store import MetadataStore, RunRecord
-from lineagehub.validation import validate_metadata
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -323,30 +321,11 @@ def main(argv: list[str] | None = None) -> int:
                             print()
                         return 0
                     case "show":
-                        ds = store.get_dataset_by_name(args.dataset)
-                        if ds is None or ds.dataset_id is None:
-                            raise ValueError(f"Unknown dataset: {args.dataset!r}")
-                        upstream_items = lineage_upstream_results(store, args.dataset, depth="all")
-                        downstream_items = lineage_downstream_results(store, args.dataset, depth="all")
-                        producers = store.list_job_names_producing_dataset(ds.dataset_id)
-                        consumers = store.list_job_names_consuming_dataset(ds.dataset_id)
+                        payload = dataset_show_for_name(store, args.dataset)
                         if args.json:
-                            sys.stdout.write(dumps_json(dataset_show_for_name(store, args.dataset)))
+                            sys.stdout.write(dumps_json(payload))
                             return 0
-                        _print_dataset_show(
-                            name=args.dataset,
-                            dataset_type=ds.dataset_type,
-                            uri=ds.uri,
-                            producer_jobs=producers,
-                            consumer_jobs=consumers,
-                            upstream_names=[x.name for x in upstream_items],
-                            downstream_names=[x.name for x in downstream_items],
-                            owner=ds.owner,
-                            description=ds.description,
-                            tags=ds.tags,
-                            criticality=ds.criticality,
-                            system=ds.system,
-                        )
+                        _print_dataset_show_from_payload(payload)
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled datasets command: {args.datasets_command!r}")
@@ -371,25 +350,11 @@ def main(argv: list[str] | None = None) -> int:
                             print()
                         return 0
                     case "show":
-                        job = store.get_job_by_name(args.job)
-                        if job is None or job.job_id is None:
-                            raise ValueError(f"Unknown job: {args.job!r}")
-                        inputs = store.list_input_dataset_names_for_job(job.job_id)
-                        outputs = store.list_output_dataset_names_for_job(job.job_id)
-                        latest = store.get_latest_run(args.job)
-                        run_count = store.count_runs_for_job(job.job_id)
+                        payload = job_show_for_name(store, args.job)
                         if args.json:
-                            sys.stdout.write(dumps_json(job_show_for_name(store, args.job)))
+                            sys.stdout.write(dumps_json(payload))
                             return 0
-                        _print_job_show(
-                            name=job.name,
-                            description=job.description,
-                            system=job.system,
-                            inputs=inputs,
-                            outputs=outputs,
-                            latest=latest,
-                            run_count=run_count,
-                        )
+                        _print_job_show_from_payload(payload)
                         return 0
                     case _:
                         raise RuntimeError(f"unhandled jobs command: {args.jobs_command!r}")
@@ -616,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
                 _print_bullets([r.name for r in analysis.affected])
                 return 0
             case "validate" | "doctor":
-                result = validate_metadata(store)
+                result = metadata_validation_for_store(store)
                 if args.json:
                     sys.stdout.write(dumps_json(result))
                     return 1 if result["status"] == "fail" else 0
@@ -673,84 +638,65 @@ def _bullets_or_none(names: list[str]) -> None:
         print(f"- {n}")
 
 
-def _print_job_show(
-    *,
-    name: str,
-    description: str | None,
-    system: str | None,
-    inputs: list[str],
-    outputs: list[str],
-    latest: RunRecord | None,
-    run_count: int,
-) -> None:
-    print(f"Job: {name}")
-    sy = system if system is not None else "(none)"
+def _print_job_show_from_payload(payload: dict) -> None:
+    job = payload["job"]
+    print(f"Job: {job['name']}")
+    sy = job["system"] if job["system"] is not None else "(none)"
     print(f"System: {sy}")
-    if description is not None:
+    if job["description"] is not None:
         print()
         print("Description:")
-        print(description)
+        print(job["description"])
     print()
     print("Input datasets:")
-    _bullets_or_none(inputs)
+    _bullets_or_none(payload["inputs"])
     print()
     print("Output datasets:")
-    _bullets_or_none(outputs)
+    _bullets_or_none(payload["outputs"])
     print()
     print("Latest run:")
+    latest = payload["latest_run"]
     if latest is None:
         print("(none)")
     else:
-        print(f"- {_run_display_id(latest)}")
-        print(f"  Status: {latest.status}")
+        print(f"- {latest['run_id']}")
+        print(f"  Status: {latest['status']}")
     print()
-    print(f"Recent runs: {run_count}")
+    print(f"Recent runs: {payload['run_count']}")
 
 
-def _print_dataset_show(
-    *,
-    name: str,
-    dataset_type: str | None,
-    uri: str | None,
-    producer_jobs: list[str],
-    consumer_jobs: list[str],
-    upstream_names: list[str],
-    downstream_names: list[str],
-    owner: str | None = None,
-    description: str | None = None,
-    tags: tuple[str, ...] | None = None,
-    criticality: str | None = None,
-    system: str | None = None,
-) -> None:
-    t = dataset_type if dataset_type is not None else "(none)"
-    u = uri if uri is not None else "(none)"
-    o = owner if owner is not None else "(none)"
-    c = criticality if criticality is not None else "(none)"
-    sy = system if system is not None else "(none)"
+def _print_dataset_show_from_payload(payload: dict) -> None:
+    d = payload["dataset"]
+    t = d["type"] if d["type"] is not None else "(none)"
+    u = d["uri"] if d["uri"] is not None else "(none)"
+    o = d["owner"] if d["owner"] is not None else "(none)"
+    c = d["criticality"] if d["criticality"] is not None else "(none)"
+    sy = d["system"] if d["system"] is not None else "(none)"
+    tags = d["tags"]
     tag_line = ", ".join(tags) if tags else "(none)"
-    print(f"Dataset: {name}")
+    print(f"Dataset: {d['name']}")
     print(f"Type: {t}")
     print(f"URI: {u}")
     print(f"Owner: {o}")
     print(f"Criticality: {c}")
     print(f"System: {sy}")
     print(f"Tags: {tag_line}")
-    if description is not None:
+    if d["description"] is not None:
         print()
         print("Description:")
-        print(description)
+        print(d["description"])
     print()
     print("Produced by:")
-    _bullets_or_none(producer_jobs)
+    _bullets_or_none(payload["producer_jobs"])
     print()
     print("Consumed by:")
-    _bullets_or_none(consumer_jobs)
+    _bullets_or_none(payload["consumer_jobs"])
     print()
     print("Upstream datasets:")
-    _bullets_or_none(upstream_names)
+    _bullets_or_none([x["name"] for x in payload["upstream"]])
     print()
     print("Downstream datasets:")
-    _bullets_or_none(downstream_names)
+    _bullets_or_none([x["name"] for x in payload["downstream"]])
 
 
 if __name__ == "__main__":

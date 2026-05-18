@@ -21,13 +21,13 @@ from lineagehub.output import (
     job_show_for_name,
     lineage_export_payload,
     latest_run_payload,
+    metadata_validation_for_store,
     run_impact_for_run_id,
     run_show_for_run_id,
     runs_list_payload,
     upstream_for_dataset,
 )
 from lineagehub.store import MetadataStore
-from lineagehub.validation import validate_metadata
 
 DepthQuery = Literal["direct", "all"]
 DirectionQuery = Literal["upstream", "downstream", "both"]
@@ -47,7 +47,7 @@ def health() -> dict[str, str]:
 @app.get("/validation")
 def metadata_validation() -> dict[str, Any]:
     store = _store()
-    return validate_metadata(store)
+    return metadata_validation_for_store(store)
 
 
 @app.get("/graph/cycles")

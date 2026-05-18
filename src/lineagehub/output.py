@@ -17,6 +17,7 @@ from lineagehub.graph import (
 )
 from lineagehub.models import LineageResult, RunImpactAnalysis
 from lineagehub.store import DatasetRecord, JobRecord, MetadataStore, RunRecord
+from lineagehub.validation import validate_metadata
 
 
 def dumps_json(data: dict[str, Any]) -> str:
@@ -436,6 +437,11 @@ def incidents_rank_for_store(
         limit_runs=limit_runs,
         limit_ranked=limit_ranked,
     )
+
+
+def metadata_validation_for_store(store: MetadataStore) -> dict[str, Any]:
+    """JSON for ``validate --json`` / ``doctor --json`` and ``GET /validation``."""
+    return validate_metadata(store)
 
 
 def export_incidents_payload(
