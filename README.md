@@ -386,16 +386,18 @@ LineageHub/
 ### Phase 3 — Operational incident analysis
 
 - **`runs list`** / **`runs show`** / **`runs latest`** for recent and per-job run discovery
-- **`incidents summarize`** and **`incidents rank`** (blast radius; later **criticality-weighted** in Phase 4)
+- **`incidents summarize`** and **`incidents rank`** with **criticality-weighted** blast-radius scoring
 - Read-only API: **`GET /runs`**, **`GET /runs/{run_id}`**, **`GET /jobs/{job}/runs/latest`**, **`GET /incidents/summary`**, **`GET /incidents/rank`**
 
-### Phase 4 — Catalog, validation, and exports (shipped) + integration (planned)
+### Phase 4 — Catalog, validation, and exports (shipped)
 
 **Shipped:** **`datasets`** / **`jobs`** catalog CLI, optional dataset catalog fields, **`validate`** / **`doctor`**, **`graph cycles`**, **`export lineage`** / **`export incidents`**, criticality-weighted incident scoring.
 
-**Planned:** import metadata from ingestion pipelines, connect with data quality alerts, link failures with affected datasets, richer metadata from external systems (see [integration plan](docs/integration_plan.md))
+### Phase 5 — Integration (planned)
 
-### Phase 5 — Visualization and assistant UX
+- Import metadata from ingestion pipelines, connect with data quality alerts, link failures with affected datasets, richer metadata from external systems (see [integration plan](docs/integration_plan.md))
+
+### Phase 6 — Visualization and assistant UX
 
 - Authenticated or multi-tenant API deployment (today’s API is local read-only)
 - Simple graph visualization in the browser
