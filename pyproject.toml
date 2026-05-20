@@ -16,6 +16,7 @@ lineagehub = "lineagehub.cli:main"
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx"]
 api = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
+ui = ["streamlit>=1.28"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
