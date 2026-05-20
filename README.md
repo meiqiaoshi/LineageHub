@@ -407,6 +407,8 @@ LineageHub/
 
 ## Local setup and usage
 
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 Requirements: **Python 3.10+** (create the virtualenv with that interpreter, e.g. `python3.12 -m venv .venv`, so `pip install -e ".[dev]"` succeeds).
 
 Install in editable mode (includes dev dependencies such as pytest):
