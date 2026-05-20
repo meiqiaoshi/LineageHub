@@ -95,7 +95,7 @@ class RunRecord:
 
 @dataclass(frozen=True)
 class DatasetRecord:
-    """Subset of dataset fields for catalog listings (Phase 4)."""
+    """Subset of dataset fields for catalog listings."""
 
     dataset_id: int
     name: str
@@ -110,7 +110,7 @@ class DatasetRecord:
 
 @dataclass(frozen=True)
 class JobRecord:
-    """Subset of job fields for catalog listings (Phase 4)."""
+    """Subset of job fields for catalog listings."""
 
     job_id: int
     name: str
