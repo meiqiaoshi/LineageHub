@@ -226,7 +226,7 @@ This means `clean_orders` depends on `raw_orders`.
 
 **Phase 3** added operational incident triage: **`runs list`**, **`runs show`**, **`runs latest`**, **`incidents summarize`** / **`incidents rank`**, plus matching read-only API routes.
 
-**Phase 4 (metadata quality)** adds dataset/job catalog commands, optional catalog fields on datasets, metadata **`validate`** / **`doctor`**, directed **cycle detection**, JSON **export** of lineage and incidents, and **criticality-weighted** blast-radius scoring for incidents (see **Catalog and metadata quality** below). The authoritative shipped list remains under **Current Status**.
+**Catalog and metadata quality** ships dataset/job catalog commands, optional catalog fields on datasets, metadata **`validate`** / **`doctor`**, directed **cycle detection**, JSON **export** of lineage and incidents, and **criticality-weighted** blast-radius scoring for incidents (see **Catalog and metadata quality** below). The authoritative shipped list remains under **Current Status**.
 
 ### Still out of scope
 
