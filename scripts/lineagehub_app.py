@@ -7,7 +7,12 @@ from pathlib import Path
 import streamlit as st
 
 from lineagehub.db_path import default_db_path
-from lineagehub.output import dataset_show_for_name, datasets_list_payload
+from lineagehub.output import (
+    dataset_show_for_name,
+    datasets_list_payload,
+    job_show_for_name,
+    jobs_list_payload,
+)
 from lineagehub.store import MetadataStore
 
 st.set_page_config(page_title="LineageHub", page_icon="🔗", layout="wide")
@@ -76,5 +81,40 @@ def _render_dataset_detail(store: MetadataStore) -> None:
             st.write("—")
 
 
+def _render_job_catalog(store: MetadataStore) -> None:
+    payload = jobs_list_payload(store.list_jobs())
+    st.subheader("Job catalog")
+    if payload["count"] == 0:
+        st.write("No jobs in this database.")
+        return
+    st.dataframe(payload["jobs"], use_container_width=True, hide_index=True)
+
+
+def _render_job_detail(store: MetadataStore) -> None:
+    names = sorted(j.name for j in store.list_jobs())
+    if not names:
+        return
+    st.subheader("Job detail")
+    selected = st.selectbox("Job", names, key="job_detail_select")
+    try:
+        detail = job_show_for_name(store, selected)
+    except ValueError as exc:
+        st.error(str(exc))
+        return
+    st.json(detail["job"])
+    st.markdown("**Inputs**")
+    st.write(detail["inputs"] or "—")
+    st.markdown("**Outputs**")
+    st.write(detail["outputs"] or "—")
+    st.markdown(f"**Run count:** {detail['run_count']}")
+    if detail["latest_run"]:
+        st.markdown("**Latest run**")
+        st.json(detail["latest_run"])
+
+
+st.divider()
 _render_dataset_catalog(store)
 _render_dataset_detail(store)
+st.divider()
+_render_job_catalog(store)
+_render_job_detail(store)
