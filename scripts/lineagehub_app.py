@@ -12,9 +12,11 @@ from lineagehub.output import (
     dataset_show_for_name,
     datasets_list_payload,
     format_edges_dot,
+    graph_cycles_for_store,
     incidents_rank_for_store,
     job_show_for_name,
     jobs_list_payload,
+    metadata_validation_for_store,
 )
 from lineagehub.store import MetadataStore
 
@@ -161,6 +163,31 @@ def _render_incidents(store: MetadataStore) -> None:
     st.dataframe(payload["incidents"], use_container_width=True, hide_index=True)
 
 
+def _render_validation(store: MetadataStore) -> None:
+    st.subheader("Metadata validation")
+    result = metadata_validation_for_store(store)
+    label = result["status"].upper()
+    if result["status"] == "pass":
+        st.success(f"Validation: {label}")
+    else:
+        st.error(f"Validation: {label}")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Errors", result["error_count"])
+    with col2:
+        st.metric("Warnings", result["warning_count"])
+    if result["errors"]:
+        st.markdown("**Errors**")
+        st.json(result["errors"])
+    if result["warnings"]:
+        st.markdown("**Warnings**")
+        st.json(result["warnings"])
+    cycles = graph_cycles_for_store(store)
+    st.metric("Lineage cycles", cycles["cycle_count"])
+    if cycles["cycles"]:
+        st.json(cycles["cycles"])
+
+
 st.divider()
 _render_dataset_catalog(store)
 _render_dataset_detail(store)
@@ -171,3 +198,5 @@ st.divider()
 _render_lineage_graph(store)
 st.divider()
 _render_incidents(store)
+st.divider()
+_render_validation(store)
