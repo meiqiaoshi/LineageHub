@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import streamlit as st
@@ -11,9 +12,11 @@ from lineagehub.graph import collect_graph_edges
 from lineagehub.output import (
     dataset_show_for_name,
     datasets_list_payload,
+    export_incidents_payload,
     format_edges_dot,
     graph_cycles_for_store,
     incidents_rank_for_store,
+    lineage_export_payload,
     job_show_for_name,
     jobs_list_payload,
     metadata_validation_for_store,
@@ -188,6 +191,30 @@ def _render_validation(store: MetadataStore) -> None:
         st.json(cycles["cycles"])
 
 
+def _render_export(store: MetadataStore) -> None:
+    st.subheader("Export preview")
+    kind = st.radio(
+        "Export type",
+        ["lineage", "incidents (summary)", "incidents (ranked)"],
+        horizontal=True,
+    )
+    if kind == "lineage":
+        data = lineage_export_payload(store)
+    elif kind == "incidents (summary)":
+        data = export_incidents_payload(store, ranked=False, status="failed")
+    else:
+        data = export_incidents_payload(store, ranked=True, status="failed", limit=10)
+    text = json.dumps(data, indent=2, sort_keys=True)
+    st.download_button(
+        "Download JSON",
+        data=text,
+        file_name="lineagehub_export.json",
+        mime="application/json",
+    )
+    with st.expander("Preview"):
+        st.code(text, language="json")
+
+
 st.divider()
 _render_dataset_catalog(store)
 _render_dataset_detail(store)
@@ -200,3 +227,5 @@ st.divider()
 _render_incidents(store)
 st.divider()
 _render_validation(store)
+st.divider()
+_render_export(store)
