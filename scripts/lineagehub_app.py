@@ -7,9 +7,11 @@ from pathlib import Path
 import streamlit as st
 
 from lineagehub.db_path import default_db_path
+from lineagehub.graph import collect_graph_edges
 from lineagehub.output import (
     dataset_show_for_name,
     datasets_list_payload,
+    format_edges_dot,
     job_show_for_name,
     jobs_list_payload,
 )
@@ -112,9 +114,47 @@ def _render_job_detail(store: MetadataStore) -> None:
         st.json(detail["latest_run"])
 
 
+def _render_lineage_graph(store: MetadataStore) -> None:
+    names = sorted(d.name for d in store.list_datasets())
+    if not names:
+        st.write("No datasets available for graph view.")
+        return
+    st.subheader("Lineage graph")
+    dataset = st.selectbox("Root dataset", names, key="graph_dataset")
+    direction = st.radio("Direction", ["downstream", "upstream", "both"], horizontal=True)
+    depth = st.radio("Depth", ["all", "direct"], horizontal=True)
+    try:
+        edges = collect_graph_edges(
+            store,
+            dataset,
+            direction=direction,  # type: ignore[arg-type]
+            depth=depth,  # type: ignore[arg-type]
+        )
+    except ValueError as exc:
+        st.error(str(exc))
+        return
+    if not edges:
+        st.write("No edges in this subgraph.")
+        return
+    dot = format_edges_dot(edges)
+    with st.expander("DOT source"):
+        st.code(dot, language="text")
+    try:
+        st.graphviz_chart(dot, use_container_width=True)
+    except Exception:
+        st.caption("Graphviz rendering unavailable; showing edge list.")
+        st.dataframe(
+            [{"upstream": u, "downstream": v} for u, v in edges],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
 st.divider()
 _render_dataset_catalog(store)
 _render_dataset_detail(store)
 st.divider()
 _render_job_catalog(store)
 _render_job_detail(store)
+st.divider()
+_render_lineage_graph(store)
