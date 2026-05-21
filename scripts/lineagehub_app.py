@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from lineagehub.db_path import default_db_path
+from lineagehub.output import datasets_list_payload
 from lineagehub.store import MetadataStore
 
 st.set_page_config(page_title="LineageHub", page_icon="🔗", layout="wide")
@@ -33,3 +34,15 @@ if not db_file.is_file():
 
 store = MetadataStore(str(db_file))
 st.sidebar.success(f"Connected: `{db_path}`")
+
+
+def _render_dataset_catalog(store: MetadataStore) -> None:
+    payload = datasets_list_payload(store.list_dataset_records())
+    st.subheader("Dataset catalog")
+    if payload["count"] == 0:
+        st.write("No datasets in this database.")
+        return
+    st.dataframe(payload["datasets"], use_container_width=True, hide_index=True)
+
+
+_render_dataset_catalog(store)
