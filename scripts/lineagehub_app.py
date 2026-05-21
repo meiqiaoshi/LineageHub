@@ -12,6 +12,7 @@ from lineagehub.output import (
     dataset_show_for_name,
     datasets_list_payload,
     format_edges_dot,
+    incidents_rank_for_store,
     job_show_for_name,
     jobs_list_payload,
 )
@@ -150,6 +151,16 @@ def _render_lineage_graph(store: MetadataStore) -> None:
         )
 
 
+def _render_incidents(store: MetadataStore) -> None:
+    st.subheader("Incident ranking")
+    limit = st.slider("Max ranked incidents", min_value=1, max_value=50, value=10)
+    payload = incidents_rank_for_store(store, status="failed", limit_ranked=limit)
+    if not payload["incidents"]:
+        st.write("No failed runs to rank.")
+        return
+    st.dataframe(payload["incidents"], use_container_width=True, hide_index=True)
+
+
 st.divider()
 _render_dataset_catalog(store)
 _render_dataset_detail(store)
@@ -158,3 +169,5 @@ _render_job_catalog(store)
 _render_job_detail(store)
 st.divider()
 _render_lineage_graph(store)
+st.divider()
+_render_incidents(store)
