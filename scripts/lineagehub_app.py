@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from lineagehub.db_path import default_db_path
-from lineagehub.output import datasets_list_payload
+from lineagehub.output import dataset_show_for_name, datasets_list_payload
 from lineagehub.store import MetadataStore
 
 st.set_page_config(page_title="LineageHub", page_icon="🔗", layout="wide")
@@ -45,4 +45,36 @@ def _render_dataset_catalog(store: MetadataStore) -> None:
     st.dataframe(payload["datasets"], use_container_width=True, hide_index=True)
 
 
+def _render_dataset_detail(store: MetadataStore) -> None:
+    names = sorted(d.name for d in store.list_datasets())
+    if not names:
+        return
+    st.subheader("Dataset detail")
+    selected = st.selectbox("Dataset", names, key="dataset_detail_select")
+    try:
+        detail = dataset_show_for_name(store, selected)
+    except ValueError as exc:
+        st.error(str(exc))
+        return
+    st.json(detail["dataset"])
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Producer jobs**")
+        st.write(detail["producer_jobs"] or "—")
+        st.markdown("**Upstream**")
+        if detail["upstream"]:
+            st.dataframe(detail["upstream"], hide_index=True)
+        else:
+            st.write("—")
+    with col2:
+        st.markdown("**Consumer jobs**")
+        st.write(detail["consumer_jobs"] or "—")
+        st.markdown("**Downstream**")
+        if detail["downstream"]:
+            st.dataframe(detail["downstream"], hide_index=True)
+        else:
+            st.write("—")
+
+
 _render_dataset_catalog(store)
+_render_dataset_detail(store)
