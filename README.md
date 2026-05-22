@@ -610,6 +610,25 @@ Incident summaries and rankings use **criticality-weighted** blast radius (see *
 
 ---
 
+## Local Demo UI
+
+Optional **Streamlit** browser for catalog, lineage graph, incident ranking, validation, and export preview (local read-only; not a hosted product).
+
+Install and launch after loading sample data:
+
+```bash
+pip install -e ".[ui]"
+lineagehub load examples/sample_lineage.json
+lineagehub load-runs examples/sample_runs.json
+streamlit run scripts/lineagehub_app.py
+```
+
+Use the sidebar to point at your SQLite file (`LINEAGEHUB_DB` or `./lineagehub.db` by default). Screenshot: *(add under `docs/images/` when available)*.
+
+Step-by-step walkthrough: [docs/demo_walkthrough.md](docs/demo_walkthrough.md).
+
+---
+
 ## Technology Stack
 
 - Python 3.10+
@@ -618,6 +637,7 @@ Incident summaries and rankings use **criticality-weighted** blast radius (see *
 - **Dataclasses** for metadata models
 - **pytest** for tests (install with **`[dev]`**)
 - Optional **FastAPI** + **Uvicorn** read-only API (install with **`[api]`**)
+- Optional **Streamlit** local demo UI (install with **`[ui]`**)
 
 ---
 
