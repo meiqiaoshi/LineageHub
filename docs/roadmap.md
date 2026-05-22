@@ -116,12 +116,12 @@ Example questions:
 
 Goal: Expose lineage metadata through service endpoints and basic visualization.
 
-**Shipped (minimal):** read-only FastAPI app with JSON payloads aligned to the CLI (lineage, runs, incidents, **catalog**, **validation**, **graph cycles**, **export** snapshots), including dataset lineage endpoints and matching **`GET /export/*`** where applicable.
+**Shipped (minimal):** read-only FastAPI app with JSON payloads aligned to the CLI (lineage, runs, incidents, **catalog**, **validation**, **graph cycles**, **export** snapshots), including dataset lineage endpoints and matching **`GET /export/*`** where applicable; optional **local Streamlit demo** (`scripts/lineagehub_app.py`, see [demo_walkthrough.md](demo_walkthrough.md)).
 
 Remaining planned work:
 
 - Authenticated or multi-tenant deployment
-- Browser graph visualization
+- Richer hosted browser graph visualization (beyond the local Streamlit demo)
 - Richer graph-specific HTTP endpoints beyond CLI parity (optional)
 
 ---

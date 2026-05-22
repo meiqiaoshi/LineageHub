@@ -230,7 +230,7 @@ This means `clean_orders` depends on `raw_orders`.
 
 ### Still out of scope
 
-- Full web UI
+- Hosted or multi-tenant production web UI (a local optional Streamlit demo is available; see **Local Demo UI**)
 - Real-time lineage capture from orchestrators
 - Authentication and multi-tenant deployment
 - Distributed execution
@@ -663,9 +663,9 @@ This makes the project relevant to roles such as:
 
 ## Current Status
 
-**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** (**`list`** / **`show`** / **`latest`**) / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, and an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI (including catalog routes, **`GET /runs/{run_id}`**, **`GET /validation`**, **`GET /graph/cycles`**, **`GET /graph/edges/{dataset}`**, and **`GET /export/*`**). Command-level workflows are summarized under **Catalog and metadata quality**.
+**Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** (**`list`** / **`show`** / **`latest`**) / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI (including catalog routes, **`GET /runs/{run_id}`**, **`GET /validation`**, **`GET /graph/cycles`**, **`GET /graph/edges/{dataset}`**, and **`GET /export/*`**), and an optional **local Streamlit demo UI** (`scripts/lineagehub_app.py`, install with **`[ui]`**). Command-level workflows are summarized under **Catalog and metadata quality** and **Local Demo UI**.
 
-**Out of scope:** authenticated or multi-tenant API deployment, web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
+**Out of scope:** authenticated or multi-tenant API deployment, hosted production web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
 
 ---
 

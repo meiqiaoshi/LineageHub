@@ -4,6 +4,11 @@ All notable changes to LineageHub are documented here.
 
 ## Unreleased
 
+### Added
+
+- Optional Streamlit local demo UI (`pip install -e ".[ui]"`, `scripts/lineagehub_app.py`)
+- Demo walkthrough documentation (`docs/demo_walkthrough.md`)
+
 ## 0.4.0 — Catalog and Metadata Quality
 
 ### Added
