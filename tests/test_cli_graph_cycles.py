@@ -37,6 +37,7 @@ def test_graph_cycles_no_cycles_json(tmp_path: Path, capsys: pytest.CaptureFixtu
 def test_graph_cycles_one_cycle_text(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     db = tmp_path / "gc.db"
     store = MetadataStore(db)
+    store.init_schema()
     a = store.upsert_dataset(Dataset(name="A"))
     b = store.upsert_dataset(Dataset(name="B"))
     store.insert_lineage_edge(LineageEdge(upstream_dataset_id=a, downstream_dataset_id=b, job_id=None))
@@ -50,6 +51,7 @@ def test_graph_cycles_one_cycle_text(tmp_path: Path, capsys: pytest.CaptureFixtu
 def test_graph_cycles_one_cycle_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     db = tmp_path / "gc.db"
     store = MetadataStore(db)
+    store.init_schema()
     a = store.upsert_dataset(Dataset(name="A"))
     b = store.upsert_dataset(Dataset(name="B"))
     store.insert_lineage_edge(LineageEdge(upstream_dataset_id=a, downstream_dataset_id=b, job_id=None))
