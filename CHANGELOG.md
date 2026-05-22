@@ -4,10 +4,32 @@ All notable changes to LineageHub are documented here.
 
 ## Unreleased
 
+- No unreleased changes.
+
+## 0.5.0 — Local Demo UI and Repository Polish
+
 ### Added
 
-- Optional Streamlit local demo UI (`pip install -e ".[ui]"`, `scripts/lineagehub_app.py`)
-- Demo walkthrough documentation (`docs/demo_walkthrough.md`)
+- Optional Streamlit local demo UI
+- Dataset and job catalog views in the UI
+- Dataset detail and job detail views
+- Lineage graph visualization support
+- Incident ranking view
+- Metadata validation view
+- Export preview/download controls
+- GitHub Actions CI workflow
+- Demo walkthrough documentation
+
+### Changed
+
+- README now describes shipped behavior rather than future Phase 4/5 work.
+- Repository cleanup improved presentation quality.
+- Documentation now links to local demo and portfolio workflows.
+
+### Notes
+
+- LineageHub remains local-first and standalone.
+- No external integrations, authentication, or production deployment layer are included in this release.
 
 ## 0.4.0 — Catalog and Metadata Quality
 

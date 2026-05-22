@@ -1,8 +1,20 @@
 # LineageHub
 
+[![CI](https://github.com/meiqiaoshi/LineageHub/actions/workflows/ci.yml/badge.svg)](https://github.com/meiqiaoshi/LineageHub/actions/workflows/ci.yml)
+
 LineageHub is a lightweight metadata platform for tracking dataset lineage, pipeline dependencies, and downstream impact analysis.
 
-The project is designed as a practical data engineering portfolio project focused on metadata management, dataset dependency graphs, and operational visibility across data pipelines.
+The project is a **completed portfolio release** (v0.5.0): local-first metadata store, CLI, optional read-only API, optional Streamlit demo, and CI. See [Current Status](#current-status) and [Portfolio summary](docs/portfolio_summary.md).
+
+### Quickstart
+
+```bash
+pip install -e ".[dev,api,ui]"
+lineagehub load examples/sample_lineage.json
+lineagehub load-runs examples/sample_runs.json
+lineagehub validate
+streamlit run scripts/lineagehub_app.py   # optional local UI
+```
 
 ---
 
@@ -62,7 +74,7 @@ The main goals of LineageHub are:
 2. Represent upstream and downstream dataset dependencies as a graph
 3. Support impact analysis when a dataset or pipeline fails
 4. Provide a simple CLI and optional read-only HTTP API for querying lineage relationships
-5. Build a foundation that can later integrate with ingestion, data quality, and natural-language metadata tools
+5. Provide a portfolio-ready foundation; external integrations are documented as future work only
 
 ---
 
@@ -142,8 +154,12 @@ lineagehub impact-run run_001
 
 - [System design](docs/system_design.md)
 - [Metadata model](docs/metadata_model.md)
-- [Roadmap](docs/roadmap.md)
-- [Integration plan](docs/integration_plan.md) — how LineageHub could align with ingestion, quality, and NL tooling (planned only)
+- [Demo walkthrough](docs/demo_walkthrough.md)
+- [Portfolio summary](docs/portfolio_summary.md)
+- [Final verification checklist](docs/final_verification.md)
+- [CHANGELOG](CHANGELOG.md)
+- [Roadmap](docs/roadmap.md) — shipped vs future work
+- [Integration plan](docs/integration_plan.md) — hypothetical cross-system patterns (not implemented)
 
 ---
 
@@ -623,9 +639,9 @@ lineagehub load-runs examples/sample_runs.json
 streamlit run scripts/lineagehub_app.py
 ```
 
-Use the sidebar to point at your SQLite file (`LINEAGEHUB_DB` or `./lineagehub.db` by default). Screenshot: *(add under `docs/images/` when available)*.
+Use the sidebar to point at your SQLite file (`LINEAGEHUB_DB` or `./lineagehub.db` by default).
 
-Step-by-step walkthrough: [docs/demo_walkthrough.md](docs/demo_walkthrough.md).
+Step-by-step walkthrough: [docs/demo_walkthrough.md](docs/demo_walkthrough.md). Optional UI screenshots can be added under `docs/images/` for a **Demo Preview** section (see [final verification](docs/final_verification.md)).
 
 ---
 
@@ -666,6 +682,10 @@ This makes the project relevant to roles such as:
 **Implemented:** SQLite-backed metadata, JSON loaders (lineage + runs), **`datasets`** / **`jobs`** catalog CLI, **`validate`** / **`doctor`**, **`export lineage`** / **`export incidents`** JSON snapshots, graph traversal with **`--depth`** / **`--json`**, **`graph edges`** export (text / Mermaid / DOT) and **`graph cycles`**, **`impact-run`**, operational **`runs`** (**`list`** / **`show`** / **`latest`**) / **`incidents`** CLI (including **criticality-weighted** blast-radius scoring) and matching **`analysis.py`** logic, an optional **read-only FastAPI** service (`src/lineagehub/api.py`) that returns the same structured JSON as the CLI (including catalog routes, **`GET /runs/{run_id}`**, **`GET /validation`**, **`GET /graph/cycles`**, **`GET /graph/edges/{dataset}`**, and **`GET /export/*`**), and an optional **local Streamlit demo UI** (`scripts/lineagehub_app.py`, install with **`[ui]`**). Command-level workflows are summarized under **Catalog and metadata quality** and **Local Demo UI**.
 
 **Out of scope:** authenticated or multi-tenant API deployment, hosted production web UI, live lineage capture from orchestrators, external system connectors (see [roadmap](docs/roadmap.md)).
+
+**Future work (not planned for v0.5.0):** portfolio integrations (IngestFlow, SentinelDQ), richer hosted visualization, natural-language query layer — see [roadmap](docs/roadmap.md).
+
+This project is **closed for active feature development** unless a new scope is defined explicitly.
 
 ---
 
